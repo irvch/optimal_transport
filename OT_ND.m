@@ -292,24 +292,26 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
 end
 
 function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter_num, extra)
-    disp("Running additional iters")
-    z = [x; y];
-    Hy = bandwidth(y, length(z));
-    lam = 50000;
-    eta = eta_hist(iter_num,:);
-    Tx = T_hist(:,:,iter_num+1);
-    for i = 1:extra % ADDITIONAL ITERATIONS WITH THE FINAL BANDWIDTH AND LAMBDA
-        % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(i, 10) == 0
-            fprintf("Iteration: %d\n", i)
+    if extra ~= 0
+        disp("Running additional iters")
+        z = [x; y];
+        Hy = bandwidth(y, length(z));
+        lam = 50000;
+        eta = eta_hist(iter_num,:);
+        Tx = T_hist(:,:,iter_num+1);
+        for i = 1:extra % ADDITIONAL ITERATIONS WITH THE FINAL BANDWIDTH AND LAMBDA
+            % FOR KEEPING TRACK OF ITERATION PROGRESS
+            if mod(i, 10) == 0
+                fprintf("Iteration: %d\n", i)
+            end
+            [eta, Tx] = adapt_learning(x, y, Tx, Hy, Hy, lam, eta);
+    
+            % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
+            T_hist(:,:,i+iter_num+1) = Tx;
+            eta_hist(i+iter_num,:) = eta;
+            L1_hist(i+iter_num,:) = C(x, Tx);
+            L2_hist(i+iter_num,:) = F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy);
+            L_hist(i+iter_num,:) = C(x, Tx) + lam*(F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy));
         end
-        [eta, Tx] = adapt_learning(x, y, Tx, Hy, Hy, lam, eta);
-
-        % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
-        T_hist(:,:,i+iter_num+1) = Tx;
-        eta_hist(i+iter_num,:) = eta;
-        L1_hist(i+iter_num,:) = C(x, Tx);
-        L2_hist(i+iter_num,:) = F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy);
-        L_hist(i+iter_num,:) = C(x, Tx) + lam*(F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy));
     end
 end
