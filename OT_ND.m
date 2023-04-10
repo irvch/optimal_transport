@@ -5,6 +5,29 @@ rng('default');
 x = normrnd(0, 0.5, [100,2]);
 y = normrnd(2.5, 0.5, [100,2]);
 
+
+% SYNTHETIC DATA IN THE SHAPE OF A GRID
+X1 = [];
+X2 = [];
+for x = 0:4
+    for y = 0:4
+        X1 = [X1; (x-2)];
+        X2 = [X2; (y-2)];
+    end
+end
+x = [X1 X2];
+
+% SYNTHETIC DATA IN THE SHAPE OF A CIRCLE
+Y1 = [];
+Y2 = [];
+for i = 0:24
+    Y1 = [Y1; cos(2*pi/20*i)*4];
+    Y2 = [Y2; sin(2*pi/20*i)*4];
+end
+y = [Y1 Y2];
+
+
+
 % STARTING PARAMETERS
 eta_init = 0.05;
 iter_num = 150;
