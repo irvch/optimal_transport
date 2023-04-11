@@ -31,13 +31,13 @@ y = [Y1 Y2];
 % STARTING PARAMETERS
 eta_init = 0.05;
 iter_num = 150;
-extra = 0;
+extra = 100;
 total = iter_num + extra;
 iters = 1:total;
 
 % RUNNING GRADIENT DESCENT
-[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+%[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
+%[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
 
 % PLOTTING INITIAL DISTRIBUTION
 figure()
@@ -131,8 +131,12 @@ hold off
 
 % DISPLAY MATRIX OF ERROR BETWEEN TWO DATASETS
 error_matrix = error(y, T_map);
+disp("Error matrix:")
 disp(error_matrix)
 
+for i = length(error_matrix)
+    disp(error_matrix(i, 1) )
+end
 
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
 function H = bandwidth(x, n)
