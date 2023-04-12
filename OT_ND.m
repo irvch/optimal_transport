@@ -6,11 +6,11 @@ x = normrnd(0, 0.5, [100,2]);
 y = normrnd(2.5, 0.5, [100,2]);
 
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID
+% SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
-for x = 0:6
-    for y = 0:6
+for x = 0:4
+    for y = 0:4
         X1 = [X1; (x-2)];
         X2 = [X2; (y-2)];
     end
@@ -36,8 +36,8 @@ total = iter_num + extra;
 iters = 1:total;
 
 % RUNNING GRADIENT DESCENT
-[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+%[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
+%[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
 
 % PLOTTING INITIAL DISTRIBUTION
 figure()
@@ -102,11 +102,26 @@ for i = 1:iter_num
     end
 end
 
+% DISPLAY MATRIX OF ERROR BETWEEN TWO DATASETS
+error_matrix = error(y, T_map);
+disp("Error matrix:")
+disp(error_matrix)
+
+% DISPLAY ERROR TO HELP WITH COLORING POINTS
+errors = zeros(length(error_matrix), 1);
+for i = 1:length(error_matrix)
+    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
+    fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
+end
+
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
+%scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+c = linspace(min(errors), max(errors), length(T_map(:,1)));
+scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
+colorbar
+colormap autumn
 title('Final Map')
 hold off
 
@@ -121,25 +136,17 @@ for i = 1:total
     end
 end
 
-% PLOTTING FINAL OPTIMAL MAP
+% PLOTTING FINAL MAP AFTER ADDITIONAL ITERATIONS
 T_map = T_hist(:,:,total+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
-labels = 1:49;
+labels = 1:25;
 labelpoints(T_map(:,1), T_map(:,2), labels)
 title('Additional Iters Map')
 hold off
 
-% DISPLAY MATRIX OF ERROR BETWEEN TWO DATASETS
-error_matrix = error(y, T_map);
-disp("Error matrix:")
-disp(error_matrix)
 
-% DISPLAY ERROR TO HELP WITH COLORING POINTS
-for i = 1:length(error_matrix)
-    fprintf("i=%d: %d\n", i, sqrt(error_matrix(i, 1)^2 + error_matrix(i, 2)^2))
-end
 
 
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
