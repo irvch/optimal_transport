@@ -9,8 +9,8 @@ y = normrnd(2.5, 0.5, [100,2]);
 % SYNTHETIC DATA IN THE SHAPE OF A GRID
 X1 = [];
 X2 = [];
-for x = 0:4
-    for y = 0:4
+for x = 0:6
+    for y = 0:6
         X1 = [X1; (x-2)];
         X2 = [X2; (y-2)];
     end
@@ -31,13 +31,13 @@ y = [Y1 Y2];
 % STARTING PARAMETERS
 eta_init = 0.05;
 iter_num = 150;
-extra = 100;
+extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 
 % RUNNING GRADIENT DESCENT
-%[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
-%[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
 
 % PLOTTING INITIAL DISTRIBUTION
 figure()
@@ -126,6 +126,8 @@ T_map = T_hist(:,:,total+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+labels = 1:49;
+labelpoints(T_map(:,1), T_map(:,2), labels)
 title('Additional Iters Map')
 hold off
 
@@ -134,9 +136,11 @@ error_matrix = error(y, T_map);
 disp("Error matrix:")
 disp(error_matrix)
 
-for i = length(error_matrix)
-    disp(error_matrix(i, 1) )
+% DISPLAY ERROR TO HELP WITH COLORING POINTS
+for i = 1:length(error_matrix)
+    fprintf("i=%d: %d\n", i, sqrt(error_matrix(i, 1)^2 + error_matrix(i, 2)^2))
 end
+
 
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
 function H = bandwidth(x, n)
