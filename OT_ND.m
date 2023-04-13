@@ -1,4 +1,8 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+y = normrnd(2.5, 0.5, [100,2]);
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
@@ -20,11 +24,6 @@ for i = 0:24
 end
 y = [Y1 Y2];
 
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2.5, 0.5, [100,2]);
-
 
 
 
@@ -37,9 +36,18 @@ extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 
+% START TIMER FOR ALGORITHM
+tic
+
 % RUNNING GRADIENT DESCENT
-%[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
-%[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+
+% MAP RUNTIME
+runtime = toc;
+
+% START TIMER FOR PLOTTING
+tic
 
 % PLOTTING INITIAL DISTRIBUTION
 figure()
@@ -131,6 +139,16 @@ scatter(T_map(:,1), T_map(:,2), 'filled')
 hold off
 
 
+
+% END TIMER AND DISPLAY RUNTIME
+plotting = toc;
+disp(['Algorithm Runtime: ' num2str(runtime) ' seconds'])
+disp(['Plotting Runtime: ' num2str(plotting) ' seconds'])
+disp(['Total Elapsed Runtime: ' num2str(runtime + plotting) ' seconds'])
+
+
+
+
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
 function H = bandwidth(x, n)
     [~, d] = size(x);                               
@@ -151,6 +169,8 @@ function pdf = gaussian(x, x_i, H)
         pdf = exp(-0.5 .* (x-x_i) / H * (x - x_i).') / const;
     end
 end
+
+
 
 % COST FUNCTION C (RETURNS CONSTANT)
 function cost = C(x, Tx)

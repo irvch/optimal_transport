@@ -1,11 +1,5 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
 
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2.5, 0.5, [100,2]);
-
-
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
@@ -26,6 +20,14 @@ for i = 0:24
 end
 y = [Y1 Y2];
 
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+y = normrnd(2.5, 0.5, [100,2]);
+
+
+
+
 
 
 % STARTING PARAMETERS
@@ -35,9 +37,18 @@ extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 
+% START TIMER FOR ALGORITHM
+tic
+
 % RUNNING GRADIENT DESCENT
 [Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
 [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
+
+% MAP RUNTIME
+runtime = toc;
+
+% START TIMER FOR PLOTTING
+tic
 
 % PLOTTING INITIAL DISTRIBUTION
 figure()
@@ -108,44 +119,35 @@ disp("Error matrix:")
 disp(error_matrix)
 
 % DISPLAY ERROR TO HELP WITH COLORING POINTS
-errors = zeros(length(error_matrix), 1);
-for i = 1:length(error_matrix)
-    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
-    %fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
-end
+%errors = zeros(length(error_matrix), 1);
+%for i = 1:length(error_matrix)
+%    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
+%    fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
+%end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-%scatter(x(:,1), x(:,2), 'filled', color = 'blue')
+scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
 %c = linspace(min(errors), max(errors), length(T_map(:,1)));
 %scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
 scatter(T_map(:,1), T_map(:,2), 'filled')
-labels = 1:25;
-labelpoints(T_map(:,1), T_map(:,2),  labels)
+%labels = 1:25;
+%labelpoints(T_map(:,1), T_map(:,2),  labels)
 %colorbar
 %colormap autumn
 %title('Final Map')
 hold off
 
-% PLOT COMPARISON
-figure()
-subplot(1, 2, 1)
-hold on
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
-s1 = subplot(1, 2, 1);
-set(s1, 'position', [1, 1, 1, 1])
-title('Initial Map')
-hold off
-subplot(1, 2, 2)
-hold on
-scatter(T_map(:,1), T_map(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
-s2 = subplot(1, 2, );
-set(s2, 'position', [1, 1, 1, 1])
-title('Final Map')
-hold off
+
+
+% END TIMER AND DISPLAY RUNTIME
+plotting = toc;
+disp(['Algorithm Runtime: ' num2str(runtime) ' seconds'])
+disp(['Plotting Runtime: ' num2str(plotting) ' seconds'])
+disp(['Total Elapsed Runtime: ' num2str(runtime + plotting) ' seconds'])
+
+
 
 
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
@@ -166,6 +168,16 @@ function pdf = gaussian(x, x_i, H)
     else      % FOR MULTIDIMENSIONAL CASE
         const = sqrt(det(H)*(2*pi)^d);
         pdf = exp(-0.5 .* (x-x_i) / H * (x - x_i).') / const;
+    end
+end
+
+function pdf = gaussian(x, x_i, H)
+    [~, d] = size(x);
+    if d == 1 % FOR ONE-DIMENSIONAL CASE
+        pdf = exp(-0.5 .* ((x-x_i) / H).^2) / sqrt(2*pi);
+    else      % FOR MULTIDIMENSIONAL CASE
+        const = sqrt(det(H)*(2*pi)^d);
+        pdf = exp(-0.5 .* sum(((x-x_i) / H) .* (x - x_i), 2)) / const;
     end
 end
 
