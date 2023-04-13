@@ -1,11 +1,5 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
 
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2.5, 0.5, [100,2]);
-
-
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
@@ -25,6 +19,14 @@ for i = 0:24
     Y2 = [Y2; sin(2*pi/20*i)*4];
 end
 y = [Y1 Y2];
+
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+y = normrnd(2.5, 0.5, [100,2]);
+
+
+
 
 
 
@@ -108,45 +110,25 @@ disp("Error matrix:")
 disp(error_matrix)
 
 % DISPLAY ERROR TO HELP WITH COLORING POINTS
-errors = zeros(length(error_matrix), 1);
-for i = 1:length(error_matrix)
-    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
-    fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
-end
+%errors = zeros(length(error_matrix), 1);
+%for i = 1:length(error_matrix)
+%    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
+%    fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
+%end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-%scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
-c = linspace(min(errors), max(errors), length(T_map(:,1)));
-scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
-colorbar
-colormap autumn
-title('Final Map')
-hold off
-
-% PLOT TRAJECTORY OF EACH POINT
-figure()
-hold on
-for i = 1:total
-    T_map_i1 = T_hist(:,:,i);
-    T_map_i2 = T_hist(:,:,i+1);
-    for j = 1:length(x)
-        plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
-    end
-end
-
-% PLOTTING FINAL MAP AFTER ADDITIONAL ITERATIONS
-T_map = T_hist(:,:,total+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
-labels = 1:25;
-labelpoints(T_map(:,1), T_map(:,2), labels)
-title('Additional Iters Map')
+%c = linspace(min(errors), max(errors), length(T_map(:,1)));
+%scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
+scatter(T_map(:,1), T_map(:,2), 'filled')
+%labels = 1:25;
+%labelpoints(T_map(:,1), T_map(:,2),  labels)
+%colorbar
+%colormap autumn
+%title('Final Map')
 hold off
-
-
 
 
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
@@ -351,5 +333,22 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, T_hist,
             L2_hist(i+iter_num,:) = F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy);
             L_hist(i+iter_num,:) = C(x, Tx) + lam*(F1(y, Tx, Hy, Hy) - F2(y, Tx, Hy, Hy));
         end
+        % PLOTTING FINAL MAP AFTER ADDITIONAL ITERATIONS
+        % PLOT TRAJECTORY OF EACH POINT
+        figure()
+        hold on
+        for i = 1:total
+            T_map_i1 = T_hist(:,:,i);
+            T_map_i2 = T_hist(:,:,i+1);
+            for j = 1:length(x)
+                plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
+            end
+        end
+        T_map = T_hist(:,:,total+1);
+        scatter(x(:,1), x(:,2), 'filled', color = 'blue')
+        scatter(y(:,1), y(:,2), 'filled', color = 'red')
+        scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+        title('Additional Iters Map')
+        hold off
     end
 end
