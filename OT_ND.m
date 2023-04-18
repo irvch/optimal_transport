@@ -1,13 +1,5 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
 
-
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2.5, 0.5, [100,2]);
-%y = x + 2;
-
-
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
@@ -27,6 +19,13 @@ for i = 0:24
     Y2 = [Y2; sin(2*pi/20*i)*4];
 end
 y = [Y1 Y2];
+
+
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+y = normrnd(1, 0.5, [100,2]);
+%y = x + 1;
 
 
 % STARTING PARAMETERS
