@@ -1,8 +1,4 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2.5, 0.5, [100,2]);
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
@@ -24,9 +20,11 @@ for i = 0:24
 end
 y = [Y1 Y2];
 
-
-
-
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+%y = normrnd(2.5, 0.5, [100,2]);
+y = x + 2;
 
 
 % STARTING PARAMETERS
@@ -118,27 +116,25 @@ disp("Error matrix:")
 disp(error_matrix)
 
 % DISPLAY ERROR TO HELP WITH COLORING POINTS
-%errors = zeros(length(error_matrix), 1);
-%for i = 1:length(error_matrix)
-%    errors(i,:) = log(abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)));
-%    fprintf("i=%d: %d\n", i, log(sqrt((error_matrix(i, 1)^2 + error_matrix(i, 2)^2))))
-%end
+errors = zeros(length(error_matrix), 1);
+for i = 1:length(error_matrix)
+    errors(i,:) = abs(error_matrix(i, 1)) + abs(error_matrix(i, 2));
+    fprintf("i=%d: %d\n", i, abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)))
+end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
-%c = linspace(min(errors), max(errors), length(T_map(:,1)));
+scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+%c = errors;
 %scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
-scatter(T_map(:,1), T_map(:,2), 'filled')
 %labels = 1:25;
 %labelpoints(T_map(:,1), T_map(:,2),  labels)
 %colorbar
-%colormap autumn
-%title('Final Map')
+%colormap(flipud(turbo))
+title('Final Map')
 hold off
-
-
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
@@ -169,8 +165,6 @@ function pdf = gaussian(x, x_i, H)
         pdf = exp(-0.5 .* (x-x_i) / H * (x - x_i).') / const;
     end
 end
-
-
 
 % COST FUNCTION C (RETURNS CONSTANT)
 function cost = C(x, Tx)
@@ -312,9 +306,9 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
             fprintf("Iteration: %d\n", i)
         end
 
-        H_const = 9;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
+        H_const = 13;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
         lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+        lambda_final = 75000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
