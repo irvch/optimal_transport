@@ -220,7 +220,7 @@ function c_grad_i = C_grad_i(x_i, Tx_i)
     c_grad_i = (Tx_i - x_i) ./ length(x_i);
 end
 
-% GRADIENT OF TEST FUNCTION (RETURNS 1xD VECTOR)
+% GRADIENT OF TEST FUNCTION WRT TO APPLIED Tx, NOT CENTER Tx (RETURNS 1xD VECTOR)
 function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     [n, d] = size(Tx);
     m = length(y);
@@ -232,7 +232,7 @@ function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     end
     for k = 1:m
         func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-        func3 = func3 + (gaussian(y(k,:), Tx_i, Hx) .* (Hx\(y(k,:) - Tx_i).').');
+        %func3 = func3 + (gaussian(y(k,:), Tx_i, Hx) .* (Hx\(y(k,:) - Tx_i).').');
     end
     f1_grad_i = (func1/(n^2)) - (func2/(m*n));
     f2_grad_i = func3/(n*m);
@@ -306,7 +306,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
             fprintf("Iteration: %d\n", i)
         end
 
-        H_const = 13;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
+        H_const = 20;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
         lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
         lambda_final = 75000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
