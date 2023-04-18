@@ -1,5 +1,13 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
 
+
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+x = normrnd(0, 0.5, [100,2]);
+y = normrnd(2.5, 0.5, [100,2]);
+%y = x + 2;
+
+
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
@@ -20,16 +28,10 @@ for i = 0:24
 end
 y = [Y1 Y2];
 
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [100,2]);
-%y = normrnd(2.5, 0.5, [100,2]);
-y = x + 2;
-
 
 % STARTING PARAMETERS
 eta_init = 0.05;
-iter_num = 150;
+iter_num = 300;
 extra = 0;
 total = iter_num + extra;
 iters = 1:total;
@@ -226,17 +228,13 @@ function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     m = length(y);
     func1 = zeros(1,d);
     func2 = zeros(1,d);
-    func3 = zeros(1,d);
     for j = 1:n
         func1 = func1 + (gaussian(Tx_i, Tx(j,:), Hx) .* (Hx\(Tx(j,:) - Tx_i).').');
     end
     for k = 1:m
         func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-        %func3 = func3 + (gaussian(y(k,:), Tx_i, Hx) .* (Hx\(y(k,:) - Tx_i).').');
     end
-    f1_grad_i = (func1/(n^2)) - (func2/(m*n));
-    f2_grad_i = func3/(n*m);
-    f_grad_i = f1_grad_i - f2_grad_i;
+    f_grad_i = (func1/(n^2)) - (func2/(m*n));
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
@@ -306,9 +304,9 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
             fprintf("Iteration: %d\n", i)
         end
 
-        H_const = 20;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-        lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 75000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+        H_const = 50;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
+        lambda_init = 25000;    % INITIAL REGULARIZATION PARAMETER
+        lambda_final = 1000000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
