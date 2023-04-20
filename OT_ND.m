@@ -20,7 +20,6 @@ for i = 0:24
 end
 y = [Y1 Y2];
 
-
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
 x = normrnd(0, 0.5, [100,2]);
@@ -132,12 +131,12 @@ T_map = T_hist(:,:,iter_num+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
-%c = errors;
-%scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
+c = errors;
+scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
 %labels = 1:25;
 %labelpoints(T_map(:,1), T_map(:,2),  labels)
-%colorbar
-%colormap(flipud(turbo))
+colorbar
+colormap(flipud(winter))
 title('Final Map')
 hold off
 
@@ -149,7 +148,7 @@ disp(['Total Elapsed Runtime: ' num2str(runtime + plotting) ' seconds'])
 
 
 
-
+% BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
 function H = bandwidth(x, n)
     [~, d] = size(x);                               
