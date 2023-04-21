@@ -23,13 +23,13 @@ y = [Y1 Y2];
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
 x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2, 1.5, [100,2]);
-%y = x + 2;
+%y = normrnd(2, 1.5, [100,2]);
+y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
-theta = pi/3;
-R = [cos(theta) -sin(theta); sin(theta) cos(theta)];
-y = x*R + 3;
+%theta = pi/3;
+%R = [cos(theta) -sin(theta); sin(theta) cos(theta)];
+%y = x*R + 3;
 
 % STARTING PARAMETERS
 eta_init = 0.05;
