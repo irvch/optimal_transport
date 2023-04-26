@@ -33,7 +33,7 @@ y = x * 2;
 
 % STARTING PARAMETERS
 eta_init = 0.05;
-iter_num = 300;
+iter_num = 100;
 extra = 0;
 total = iter_num + extra;
 iters = 1:total;
