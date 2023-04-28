@@ -22,8 +22,8 @@ y = [Y1 Y2];
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2, 1.5, [100,2]);
+x = normrnd(0, 0.5, [50,2]);
+y = normrnd(2, 0.5, [50,2]);
 %y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
@@ -32,7 +32,7 @@ y = normrnd(2, 1.5, [100,2]);
 %y = x*R + 3;
 
 % STARTING PARAMETERS
-eta_init = 0.05;
+eta_init = 0.1;
 iter_num = 100;
 extra = 0;
 total = iter_num + extra;
@@ -54,8 +54,8 @@ tic
 % PLOTTING INITIAL DISTRIBUTION
 figure()
 hold on
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
+scatter(x(:,1), x(:,2), 'filled', 'blue')
+scatter(y(:,1), y(:,2), 'filled', 'red')
 hold off
 
 figure()
@@ -90,9 +90,9 @@ for i = 1:total
         T_map = T_hist(:,:,i);
         subplot(5, 5, count)
         hold on
-        scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-        scatter(y(:,1), y(:,2), 'filled', color = 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+        scatter(x(:,1), x(:,2), 'filled', 'blue')
+        scatter(y(:,1), y(:,2), 'filled', 'red')
+        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
         iterations = sprintf('Iterations: %d', i);
         title(iterations)
         hold off
@@ -128,9 +128,9 @@ end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+scatter(x(:,1), x(:,2), 'filled', 'blue')
+scatter(y(:,1), y(:,2), 'filled', 'red')
+scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 %c = errors;
 %scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
 %labels = 1:25;
@@ -155,7 +155,7 @@ function H = bandwidth(x, n)
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
     else      % FOR MULTIDIMENSIONAL CASE
-        H = diag(diag(cov(x)))*(4/((d+2)*n))^(1/(d+4));
+        H = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
     end
 end
 
@@ -219,7 +219,7 @@ function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     end
     for k = 1:m
         func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-    end
+    end 
     f_grad_i = (func1/(n^2)) - (func2/(m*n));
 end
 
@@ -291,8 +291,8 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         end
 
         H_const = 50;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-        lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+        lambda_init = 15000;    % INITIAL REGULARIZATION PARAMETER
+        lambda_final = 150000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
@@ -339,13 +339,13 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, T_hist,
             T_map_i1 = T_hist(:,:,i);
             T_map_i2 = T_hist(:,:,i+1);
             for j = 1:length(x)
-                plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
+                plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], 'green')
             end
         end
         T_map = T_hist(:,:,total+1);
-        scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-        scatter(y(:,1), y(:,2), 'filled', color = 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+        scatter(x(:,1), x(:,2), 'filled', 'blue')
+        scatter(y(:,1), y(:,2), 'filled', 'red')
+        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
         title('Additional Iters Map')
         hold off
     end

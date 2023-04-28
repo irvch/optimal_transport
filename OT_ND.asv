@@ -22,8 +22,8 @@ y = [Y1 Y2];
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-x = normrnd(0, 0.5, [10,2]);
-y = normrnd(2, 1.5, [10,2]);
+x = normrnd(0, 0.5, [200,2]);
+y = normrnd(2, 0.5, [200,2]);
 %y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
@@ -54,8 +54,8 @@ tic
 % PLOTTING INITIAL DISTRIBUTION
 figure()
 hold on
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
+scatter(x(:,1), x(:,2), 'filled', 'blue')
+scatter(y(:,1), y(:,2), 'filled', 'red')
 hold off
 
 figure()
@@ -90,9 +90,9 @@ for i = 1:total
         T_map = T_hist(:,:,i);
         subplot(5, 5, count)
         hold on
-        scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-        scatter(y(:,1), y(:,2), 'filled', color = 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
+        scatter(x(:,1), x(:,2), 'filled', 'blue')
+        scatter(y(:,1), y(:,2), 'filled', 'red')
+        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
         iterations = sprintf('Iterations: %d', i);
         title(iterations)
         hold off
@@ -128,15 +128,15 @@ end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter(x(:,1), x(:,2), 'filled', color = 'blue')
-scatter(y(:,1), y(:,2), 'filled', color = 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
-c = errors;
-scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
+scatter(x(:,1), x(:,2), 'filled', 'blue')
+scatter(y(:,1), y(:,2), 'filled', 'red')
+scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+%c = errors;
+%scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
 %labels = 1:25;
 %labelpoints(T_map(:,1), T_map(:,2),  labels)
-colorbar
-colormap(flipud(winter))
+%colorbar
+%colormap(flipud(winter))
 title('Final Map')
 hold off
 
@@ -212,14 +212,6 @@ end
 function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     [n, d] = size(Tx);
     m = length(y);
-    sum(arrayfun(@(j) gaussian(Tx(i,:), Tx(j,:), Hx), 1:n))
-    sum(arrayfun(@(j) gaussian(Tx(i,:), Tx(j,:), Hx), 1:n))
-
-    func1 = sum(gaussian(Tx_i, Tx, Hx) .* (diff1 ./ Hx), 1);
-    func2 = sum(gaussian(Tx_i, y, Hy) .* (diff2 ./ Hy), 1);
-    disp("gpt code")
-    disp(func1)
-    disp(func2)
     func1 = zeros(1,d);
     func2 = zeros(1,d);
     for j = 1:n
@@ -227,10 +219,7 @@ function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
     end
     for k = 1:m
         func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-    end
-    disp("OG code")
-    disp(func1)
-    disp(func2)
+    end 
     f_grad_i = (func1/(n^2)) - (func2/(m*n));
 end
 
@@ -302,8 +291,8 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         end
 
         H_const = 10;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-        lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+        lambda_init = 10000;    % INITIAL REGULARIZATION PARAMETER
+        lambda_final = 100000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
