@@ -23,8 +23,8 @@ y = [Y1 Y2];
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
 x = normrnd(0, 0.5, [100,2]);
-%y = normrnd(2, 1.5, [100,2]);
-y = x * 2;
+y = normrnd(2, 1.5, [100,2]);
+%y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
 %theta = pi/3;
@@ -131,12 +131,12 @@ T_map = T_hist(:,:,iter_num+1);
 scatter(x(:,1), x(:,2), 'filled', color = 'blue')
 scatter(y(:,1), y(:,2), 'filled', color = 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', color = 'green')
-c = errors;
-scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
+%c = errors;
+%scatter(T_map(:,1), T_map(:,2), [], c, 'filled')
 %labels = 1:25;
 %labelpoints(T_map(:,1), T_map(:,2),  labels)
-colorbar
-colormap(flipud(winter))
+%colorbar
+%colormap(flipud(winter))
 title('Final Map')
 hold off
 
@@ -184,16 +184,8 @@ end
 function f1 = F1(Tx, y, Hx, Hy)
     n = length(Tx);
     m = length(y);
-    func1 = 0;
-    func2 = 0;
-    for i = 1:n
-        for j = 1:n
-            func1 = func1 + gaussian(Tx(i,:), Tx(j,:), Hx);
-        end
-        for k = 1:m
-            func2 = func2 + gaussian(Tx(i,:), y(k,:), Hy);
-        end
-    end
+    func1 = sum(arrayfun(@(i) sum(arrayfun(@(j) gaussian(Tx(i,:), Tx(j,:), Hx), 1:n)), 1:n));
+    func2 = sum(arrayfun(@(i) sum(arrayfun(@(k) gaussian(Tx(i,:), y(k,:), Hy), 1:m)), 1:n));
     f1 = (func1/(n^2)) - (func2/(m*n));
 end
 
@@ -201,16 +193,8 @@ end
 function f2 = F2(Tx, y, Hx, Hy)
     n = length(Tx);
     m = length(y);
-    func1 = 0;
-    func2 = 0;
-    for i = 1:m
-        for j = 1:n
-            func1 = func1 + gaussian(y(i,:), Tx(j,:), Hx);
-        end
-        for k = 1:m
-            func2 = func2 + gaussian(y(i,:), y(k,:), Hy);
-        end
-    end
+    func1 = sum(arrayfun(@(i) sum(arrayfun(@(j) gaussian(y(i,:), Tx(j,:), Hx), 1:n)), 1:m));
+    func2 = sum(arrayfun(@(i) sum(arrayfun(@(k) gaussian(y(i,:), y(k,:), Hy), 1:m)), 1:m));
     f2 = (func1/(m*n)) - (func2/(m^2));
 end
 
@@ -307,8 +291,8 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         end
 
         H_const = 50;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-        lambda_init = 25000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 1000000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+        lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
+        lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
