@@ -22,8 +22,8 @@ y = [Y1 Y2];
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-x = normrnd(0, 0.5, [50,2]);
-y = normrnd(2, 0.5, [50,2]);
+x = normrnd(0, 0.5, [10,2]);
+y = normrnd(2, 0.5, [10,2]);
 %y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
@@ -37,12 +37,15 @@ iter_num = 100;
 extra = 0;
 total = iter_num + extra;
 iters = 1:total;
+H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
+lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
+lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 % START TIMER FOR ALGORITHM
 tic
 
 % RUNNING GRADIENT DESCENT
-[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra);
+[Ts, L1s, L2s, Ls, etas] = grad_descent(x, y, eta_init, iter_num, extra, H_const, lambda_init, lambda_final);
 [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = more_iters(x, y, Ts, L1s, L2s, Ls, etas, iter_num, extra);
 
 % MAP RUNTIME
@@ -267,8 +270,8 @@ function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam
     lam_new = (lam_init * (it - i) / it) + (lam_final * i / it); 
 end
 
-% GRADIENT DESCENT (MAYBE USE SOME FIXED POINT ITERATION TO GET THE IMPLICIT VERSION)
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, iter_num, extra)
+% GRADIENT DESCENT
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, iter_num, extra, H_const, lambda_init, lambda_final)
 
     % INITIALIZING HISTORY TO ZEROS FOR PLOTTING OVER TIME
     T_hist = x; % INITIAL MAP SHOULD BE ORIGINAL SET OF POINTS
@@ -289,10 +292,6 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         if mod(i, 10) == 0
             fprintf("Iteration: %d\n", i)
         end
-
-        H_const = 50;           % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-        lambda_init = 15000;    % INITIAL REGULARIZATION PARAMETER
-        lambda_final = 150000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lambda_init, lambda_final);
