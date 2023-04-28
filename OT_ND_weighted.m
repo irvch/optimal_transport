@@ -153,13 +153,20 @@ function pdf = gaussian(x, x_i, H)
     end
 end
 
+% CREATE WEIGHT MATRIX
+function [weight, weight_sum] = W(x_i)
+    weight = x_i;
+
+end
+
 % COST FUNCTION C (RETURNS CONSTANT)
-function cost = C(x, Tx)
+function cost = C(x, Tx, w)
     [~, d] = size(x);
+    gamma = sum(w);
     if d == 1 % FOR ONE-DIMENSIONAL CASE
-        cost = (norm(x - Tx)^2) / 2;
+        cost = gamma*(norm(x - Tx)^2) / 2;
     else      % FOR MULTIDIMENSIONAL CASE
-        cost = (norm(x - Tx, 'fro')^2) / 2;
+        cost = gamma*(norm(x - Tx, 'fro')^2) / 2;
     end
 end
 
