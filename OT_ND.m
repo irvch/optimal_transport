@@ -29,8 +29,8 @@ y = [Y1 Y2];
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-x = normrnd(0, 0.5, [100,2]);
-y = normrnd(2, 0.5, [100,2]);
+x = normrnd(0, 0.5, [20,2]);
+y = normrnd(2, 0.5, [20,2]);
 %y = x * 2;
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
@@ -45,8 +45,8 @@ extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_init = 10000;    % INITIAL REGULARIZATION PARAMETER
-lambda_final = 100000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
+lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 % START TIMER FOR ALGORITHM
 tic
@@ -125,16 +125,16 @@ for i = 1:iter_num
 end
 
 % DISPLAY MATRIX OF ERROR BETWEEN TWO DATASETS
-error_matrix = error(y, T_map);
-disp("Error matrix:")
-disp(error_matrix)
+%error_matrix = error(y, T_map);
+%disp("Error matrix:")
+%disp(error_matrix)
 
 % DISPLAY ERROR TO HELP WITH COLORING POINTS
-errors = zeros(length(error_matrix), 1);
-for i = 1:length(error_matrix)
-    errors(i,:) = abs(error_matrix(i, 1)) + abs(error_matrix(i, 2));
-    fprintf("i=%d: %d\n", i, abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)))
-end
+%errors = zeros(length(error_matrix), 1);
+%for i = 1:length(error_matrix)
+%    errors(i,:) = abs(error_matrix(i, 1)) + abs(error_matrix(i, 2));
+%    fprintf("i=%d: %d\n", i, abs(error_matrix(i, 1)) + abs(error_matrix(i, 2)))
+%end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
@@ -194,18 +194,24 @@ end
 function f1 = F1(Tx, y, Hx, Hy)
     n = length(Tx);
     m = length(y);
+    %func1a = sum(gaussian(Tx, Tx, Hx), "all");
+    %func2a = sum(gaussian(Tx, y, Hy), "all");
     func1 = sum(arrayfun(@(i) sum(arrayfun(@(j) gaussian(Tx(i,:), Tx(j,:), Hx), 1:n)), 1:n));
     func2 = sum(arrayfun(@(i) sum(arrayfun(@(k) gaussian(Tx(i,:), y(k,:), Hy), 1:m)), 1:n));
     f1 = (func1/(n^2)) - (func2/(m*n));
+    %f1 = (func1a/(n^2)) - (func2a/(m*n));
 end
 
 % TEST FUNCTION PART F2 (RETURNS CONSTANT)
 function f2 = F2(Tx, y, Hx, Hy)
     n = length(Tx);
     m = length(y);
+    %func1b = sum(gaussian(y, Tx, Hx), "all");
+    %func2b = sum(gaussian(y, y, Hy), "all");
     func1 = sum(arrayfun(@(i) sum(arrayfun(@(j) gaussian(y(i,:), Tx(j,:), Hx), 1:n)), 1:m));
     func2 = sum(arrayfun(@(i) sum(arrayfun(@(k) gaussian(y(i,:), y(k,:), Hy), 1:m)), 1:m));
     f2 = (func1/(m*n)) - (func2/(m^2));
+    %f2 = (func1b/(m*n)) - (func2b/(m^2));
 end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
@@ -219,28 +225,59 @@ function c_grad_i = C_grad_i(x_i, Tx_i)
 end
 
 % GRADIENT OF TEST FUNCTION WRT TO APPLIED Tx, NOT CENTER Tx (RETURNS 1xD VECTOR)
-function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
-    [n, d] = size(Tx);
-    m = length(y);
-    func1 = zeros(1,d);
-    func2 = zeros(1,d);
-    for j = 1:n
-        func1 = func1 + (gaussian(Tx_i, Tx(j,:), Hx) .* (Hx\(Tx(j,:) - Tx_i).').');
+%function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
+%    [n, d] = size(Tx);
+%    m = length(y);
+%    func1 = zeros(1,d);
+%    func2 = zeros(1,d);
+%    for j = 1:n
+%        func1 = func1 + (gaussian(Tx_i, Tx(j,:), Hx) .* (Hx\(Tx(j,:) - Tx_i).').');
+%    end
+%    for k = 1:m
+%        func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
+%    end 
+%    f_grad_i = (func1/(n^2)) - (func2/(m*n));
+%end
+
+function res2 = F_grad_i(Tx1, y, Tx2, Hx, Hy)
+    [N, d] = size(Tx1);
+    M = length(y);
+    
+    tmp1 = zeros(d,N,N);
+    tmp2 = zeros(d,N,M);
+    
+    for l=1:d
+         tmp1(l,:,:) = (Tx1(:,l)' - Tx2(:,l))./Hx;
+         tmp2(l,:,:) = (y(:,l)' - Tx2(:,l))./Hy;
     end
-    for k = 1:m
-        func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-    end 
-    f_grad_i = (func1/(n^2)) - (func2/(m*n));
+    
+    tmp5 = sum(tmp1.*exp(-1/2.*sum(tmp1.^2,1)), 3);
+    tmp6 = sum(tmp2.*exp(-1/2.*sum(tmp2.^2,1)), 3);
+    
+    c1 = 1/(N^2)/((Hx*sqrt(2*pi))^d);
+    c2 = 1/(M*N)/((Hy*sqrt(2*pi))^d);
+    
+    res2 = c1./(Hx).*(tmp5)' - c2./(Hy).*(tmp6)'; 
+
+end
+
+function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
+    [n, d] = size(x);
+    gradC = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
+    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
+        gradC(i,:) = C_grad_i(x(i,:), Tx(i,:));
+    end
+    gradL = gradC + lam*F_grad_i(Tx, y, Tx, Hx, Hy);
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
-function l_grad = L_grad(x, y, Tx, Hx, Hy, lam)
-    [n, d] = size(x);
-    l_grad = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
-    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-        l_grad(i,:) = C_grad_i(x(i,:), Tx(i,:)) + lam*(F_grad_i(Tx, y, Tx(i,:), Hx, Hy));
-    end
-end
+%function l_grad = L_grad(x, y, Tx, Hx, Hy, lam)
+%    [n, d] = size(x);
+%    l_grad = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
+%    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
+%        l_grad(i,:) = C_grad_i(x(i,:), Tx(i,:)) + lam*(F_grad_i(Tx, y, Tx(i,:), Hx, Hy));
+%    end
+%end
 
 % ERROR MATRIX BETWEEN DATASETS
 function err_matrix = error(y, Tx)
