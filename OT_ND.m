@@ -176,7 +176,7 @@ function pdf = gaussian(x, x_i, H)
         pdf = exp(-0.5 .* (x-x_i) / H)^2 / sqrt(2*pi);
     else      % FOR MULTIDIMENSIONAL CASE
         const = sqrt(det(H)*(2*pi)^d);
-        pdf = exp(-0.5 .* (x-x_i) / H * (x - x_i).') / const;
+        pdf = exp(-0.5 .* (x-x_i) / H * (x-x_i).') / const;
     end
 end
 
@@ -220,8 +220,12 @@ function l = L(x, y, Tx, Hx, Hy, lam)
 end
 
 % GRADIENT OF COST (RETURNS 1xD VECTOR)
-function c_grad_i = C_grad_i(x_i, Tx_i)
-    c_grad_i = (Tx_i - x_i) ./ length(x_i);
+function gradC = C_grad(x, Tx)
+    [n, d] = size(x);
+    gradC = zeros(n,d);   % INITIALIZE L GRADIENT TO ZEROS
+    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
+        gradC(i,:) = (Tx(i,:) - x(i,:)) ./ length(x(i,:));
+    end
 end
 
 % GRADIENT OF TEST FUNCTION WRT TO APPLIED Tx, NOT CENTER Tx (RETURNS 1xD VECTOR)
@@ -239,45 +243,29 @@ end
 %    f_grad_i = (func1/(n^2)) - (func2/(m*n));
 %end
 
-function res2 = F_grad_i(Tx1, y, Tx2, Hx, Hy)
-    [N, d] = size(Tx1);
-    M = length(y);
-    
-    tmp1 = zeros(d,N,N);
-    tmp2 = zeros(d,N,M);
-    
-    for l=1:d
-         tmp1(l,:,:) = (Tx1(:,l)' - Tx2(:,l))./Hx;
-         tmp2(l,:,:) = (y(:,l)' - Tx2(:,l))./Hy;
+function f_grad = F_grad_i(Tx1, y, Tx2, Hx, Hy)
+    [n, d] = size(Tx1);
+    m = length(y);
+    func1 = zeros(d,n,n);
+    func2 = zeros(d,n,m);
+    for i = 1:d
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
     end
-    
-    tmp5 = sum(tmp1.*exp(-1/2.*sum(tmp1.^2,1)), 3);
-    tmp6 = sum(tmp2.*exp(-1/2.*sum(tmp2.^2,1)), 3);
-    
-    c1 = 1/(N^2)/((Hx*sqrt(2*pi))^d);
-    c2 = 1/(M*N)/((Hy*sqrt(2*pi))^d);
-    
-    res2 = c1./(Hx).*(tmp5)' - c2./(Hy).*(tmp6)'; 
 
-end
-
-function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
-    [n, d] = size(x);
-    gradC = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
-    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-        gradC(i,:) = C_grad_i(x(i,:), Tx(i,:));
-    end
-    gradL = gradC + lam*F_grad_i(Tx, y, Tx, Hx, Hy);
+    f1 = sum(func1.*exp(-1/2.*sum(func1.^2,1)), 3);
+    f2 = sum(func2.*exp(-1/2.*sum(func2.^2,1)), 3);
+    
+    c1 = 1/(n^2)/((Hx*sqrt(2*pi))^d);
+    c2 = 1/(m*n)/((Hy*sqrt(2*pi))^d);
+    
+    f_grad = c1./(Hx).*(f1)' - c2./(Hy).*(f2)';
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
-%function l_grad = L_grad(x, y, Tx, Hx, Hy, lam)
-%    [n, d] = size(x);
-%    l_grad = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
-%    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-%        l_grad(i,:) = C_grad_i(x(i,:), Tx(i,:)) + lam*(F_grad_i(Tx, y, Tx(i,:), Hx, Hy));
-%    end
-%end
+function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
+    gradL = C_grad(x, Tx) + lam*F_grad_i(Tx, y, Tx, Hx, Hy);
+end
 
 % ERROR MATRIX BETWEEN DATASETS
 function err_matrix = error(y, Tx)
