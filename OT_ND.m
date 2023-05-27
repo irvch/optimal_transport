@@ -1,11 +1,5 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
-
-
-
 % DEFINITELY O(N^2) RUNTIME
-
-
-
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
@@ -45,7 +39,7 @@ extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
+lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 % START TIMER FOR ALGORITHM
@@ -243,7 +237,7 @@ end
 %    f_grad_i = (func1/(n^2)) - (func2/(m*n));
 %end
 
-function f_grad = F_grad_i(Tx1, y, Tx2, Hx, Hy)
+function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     [n, d] = size(Tx1);
     m = length(y);
     func1 = zeros(d,n,n);
@@ -259,24 +253,24 @@ function f_grad = F_grad_i(Tx1, y, Tx2, Hx, Hy)
     c1 = 1/(n^2)/((Hx*sqrt(2*pi))^d);
     c2 = 1/(m*n)/((Hy*sqrt(2*pi))^d);
     
-    f_grad = c1./(Hx).*(f1)' - c2./(Hy).*(f2)';
+    gradF = c1./(Hx).*(f1)' - c2./(Hy).*(f2)';
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
 function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
-    gradL = C_grad(x, Tx) + lam*F_grad_i(Tx, y, Tx, Hx, Hy);
+    gradL = C_grad(x, Tx) + lam*F_grad(Tx, y, Tx, Hx, Hy);
 end
 
 % ERROR MATRIX BETWEEN DATASETS
-function err_matrix = error(y, Tx)
-    [n, d] = size(Tx);
-    z = [Tx; y];                        % COMBINED SET OF POINTS, FOR BANDWIDTH
-    Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
-    err_matrix = zeros(n,d);
-    for i = 1:length(Tx)
-        err_matrix(i,:) = F_grad_i(Tx, y, Tx(i,:), Hy, Hy);
-    end
-end
+%function err_matrix = error(y, Tx)
+%    [n, d] = size(Tx);
+%    z = [Tx; y];                        % COMBINED SET OF POINTS, FOR BANDWIDTH
+%    Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
+%    err_matrix = zeros(n,d);
+%    for i = 1:length(Tx)
+%        err_matrix(i,:) = F_grad(Tx, y, Tx(i,:), Hy, Hy);
+%    end
+%end
 
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
 function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
