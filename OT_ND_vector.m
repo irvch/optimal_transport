@@ -1,37 +1,43 @@
 % MULTIDIMENSIONAL OPTIMAL TRANSPORT
 
-
-
-% DEFINITELY O(N^2) RUNTIME
-
-
-
+% RANDOMLY GENERATED 2D POINTS
+rng('default');
+%x = normrnd(0, 0.5, [100,2]);
+%y = x * 2;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
 X1 = [];
 X2 = [];
-for x = 0:4
-    for y = 0:4
+for x = 0:5
+    for y = 0:5
         X1 = [X1; (x-2)];
         X2 = [X2; (y-2)];
     end
 end
-x = [X1 X2];
+%x = [X1 X2];
+x_old = [X1 X2];
+y = normrnd(2, 0.5, [50,2]);
+
+% PRECONDITIONING
+sourceAvg = mean(x_old);
+disp(sourceAvg)
+targetAvg = mean(y);
+disp(targetAvg)
+sourceStd = std(x_old);
+targetStd = std(y);
+disp(x_old)
+disp(x_old - sourceAvg + targetAvg)
+x = (x_old).*targetStd./sourceStd + targetAvg;
+disp(mean(x))
 
 % SYNTHETIC DATA IN THE SHAPE OF A CIRCLE
-Y1 = [];
-Y2 = [];
-for i = 0:24
-    Y1 = [Y1; cos(2*pi/20*i)*4];
-    Y2 = [Y2; sin(2*pi/20*i)*4];
-end
-y = [Y1 Y2];
-
-% RANDOMLY GENERATED 2D POINTS
-rng('default');
-x = normrnd(0, 0.5, [20,2]);
-y = normrnd(2, 0.5, [20,2]);
-%y = x * 2;
+%Y1 = [];
+%Y2 = [];
+%for i = 0:24
+%    Y1 = [Y1; cos(2*pi/20*i)*4];
+%    Y2 = [Y2; sin(2*pi/20*i)*4];
+%end
+%y = [Y1 Y2];
 
 % TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
 %theta = pi/3;
@@ -45,7 +51,7 @@ extra = 0;
 total = iter_num + extra;
 iters = 1:total;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
+lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 % START TIMER FOR ALGORITHM
@@ -214,35 +220,47 @@ function f2 = F2(Tx, y, Hx, Hy)
     %f2 = (func1b/(m*n)) - (func2b/(m^2));
 end
 
+function test = Test(Tx1, y, Tx2, Hx, Hy)
+    [n, d] = size(Tx1);
+    m = length(y);
+    func1 = zeros(d,n,n);
+    func2 = zeros(d,n,m);
+    func3 = zeros(d,m,n);
+    func4 = zeros(d,m,m);
+    for i = 1:d
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
+        func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx;
+        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy;
+    end
+    f1 = sum(exp(-1/2.*sum(func1.^2, 1)), 'all');
+    f2 = sum(exp(-1/2.*sum(func2.^2, 1)), 'all');
+    f3 = sum(exp(-1/2.*sum(func3.^2, 1)), 'all');
+    f4 = sum(exp(-1/2.*sum(func4.^2, 1)), 'all');
+    
+    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
+    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d);
+    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d);
+    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d);
+    
+    test = const1.*(f1)' - const2.*(f2)' - const3.*(f3)' + const4.*(f4)';
+end
+
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
 function l = L(x, y, Tx, Hx, Hy, lam)
-    l = C(x, Tx) + lam*(F1(Tx, y, Hx, Hy) - F2(Tx, y, Hx, Hy));
+    l = C(x, Tx) + lam*(Test(Tx, y, Tx, Hx, Hy));
 end
 
 % GRADIENT OF COST (RETURNS 1xD VECTOR)
-function c_grad_i = C_grad_i(x, Tx)
-    c_grad_i = (Tx_i - x_i) ./ length(x_i);
+function gradC = C_grad(x, Tx)
+    [n, d] = size(x);
+    gradC = zeros(n,d);   % INITIALIZE L GRADIENT TO ZEROS
     for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-        gradC(i,:) = C_grad_i(x(i,:), Tx(i,:));
+        gradC(i,:) = (Tx(i,:) - x(i,:)) ./ length(x(i,:));
     end
 end
 
-% GRADIENT OF TEST FUNCTION WRT TO APPLIED Tx, NOT CENTER Tx (RETURNS 1xD VECTOR)
-%function f_grad_i = F_grad_i(Tx, y, Tx_i, Hx, Hy)
-%    [n, d] = size(Tx);
-%    m = length(y);
-%    func1 = zeros(1,d);
-%    func2 = zeros(1,d);
-%    for j = 1:n
-%        func1 = func1 + (gaussian(Tx_i, Tx(j,:), Hx) .* (Hx\(Tx(j,:) - Tx_i).').');
-%    end
-%    for k = 1:m
-%        func2 = func2 + (gaussian(Tx_i, y(k,:), Hy) .* (Hy\(y(k,:) - Tx_i).').');
-%    end 
-%    f_grad_i = (func1/(n^2)) - (func2/(m*n));
-%end
-
-function f_grad = F_grad_i(Tx1, y, Tx2, Hx, Hy)
+function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     [n, d] = size(Tx1);
     m = length(y);
     func1 = zeros(d,n,n);
@@ -252,42 +270,18 @@ function f_grad = F_grad_i(Tx1, y, Tx2, Hx, Hy)
         func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
     end
 
-    f1 = sum(func1.*exp(-1/2.*sum(func1.^2,1)), 3);
-    f2 = sum(func2.*exp(-1/2.*sum(func2.^2,1)), 3);
+    f1 = sum(func1.*exp(-1/2.*sum(func1.^2, 1)), 3);
+    f2 = sum(func2.*exp(-1/2.*sum(func2.^2, 1)), 3);
     
-    c1 = 1/(n^2)/((Hx*sqrt(2*pi))^d);
-    c2 = 1/(m*n)/((Hy*sqrt(2*pi))^d);
+    c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx);
+    c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy);
     
-    f_grad = c1./(Hx).*(f1)' - c2./(Hy).*(f2)';
-end
-
-function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
-    [n, d] = size(x);
-    gradC = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
-    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-        gradC(i,:) = C_grad_i(x(i,:), Tx(i,:));
-    end
-    gradL = gradC + lam*F_grad_i(Tx, y, Tx, Hx, Hy);
+    gradF = c1.*(f1)' - c2.*(f2)';
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
-%function l_grad = L_grad(x, y, Tx, Hx, Hy, lam)
-%    [n, d] = size(x);
-%    l_grad = zeros(n,d);  % INITIALIZE L GRADIENT TO ZEROS
-%    for i = 1:n           % ADD VALUE TO L GRADIENT MATRIX AT EACH I
-%        l_grad(i,:) = C_grad_i(x(i,:), Tx(i,:)) + lam*(F_grad_i(Tx, y, Tx(i,:), Hx, Hy));
-%    end
-%end
-
-% ERROR MATRIX BETWEEN DATASETS
-function err_matrix = error(y, Tx)
-    [n, d] = size(Tx);
-    z = [Tx; y];                        % COMBINED SET OF POINTS, FOR BANDWIDTH
-    Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
-    err_matrix = zeros(n,d);
-    for i = 1:length(Tx)
-        err_matrix(i,:) = F_grad_i(Tx, y, Tx(i,:), Hy, Hy);
-    end
+function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
+    gradL = C_grad(x, Tx) + lam * F_grad(Tx, y, Tx, Hx, Hy);
 end
 
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
