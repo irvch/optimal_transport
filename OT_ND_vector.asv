@@ -20,8 +20,8 @@ rng('default');
 %y = x*R + 3;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,5,5);
-b = linspace(0,5,5);
+a = linspace(0,5,10);
+b = linspace(0,5,10);
 [A, B] = meshgrid(a, b);
 
 x_old = [A(:) B(:)];
@@ -130,6 +130,22 @@ scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 title('FINAL MAP')
 hold off
 
+% NEAREST NEIGHBOR SEARCH
+idk = knnsearch(T_map, y);
+new = [];
+for i = idk
+    new = [new; T_map(i,:)];
+end
+
+% PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
+figure()
+hold on
+scatter(new(:,1), new(:,2), 'filled', 'blue');
+scatter(y(:,1), y(:,2), 'filled', 'red');
+title('NEAREST NEIGHBORS RESULT')
+hold off
+
+
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
@@ -172,11 +188,11 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
 
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
-        % PART F1 WHERE APPLIED POINTS ARE IN Tx
+        % PART F1 WHERE CENTER POINTS ARE IN Tx
         func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
         func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
 
-        % PART F2 WHERE APPLIED POINTS ARE IN Y
+        % PART F2 WHERE CENTER POINTS ARE IN Y
         func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx;
         func4(i,:,:) = (y(:,i)' - y(:,i))./Hy;
     end
@@ -215,7 +231,7 @@ function gradC = C_grad(x, Tx)
     end
 end
 
-% GRADIENT OF TEST FUNCTION WITH DERIVATIVE ONLY ON APPLIED 
+% GRADIENT OF TEST FUNCTION TAKEN WITH RESPECT TO Tx CENTER
 function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     [n, d] = size(Tx1);
     m = length(y);
@@ -282,7 +298,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     L_hist = zeros(iter_num, 1);
 
     % INITIAL VALUES
-    z = [x; y];                         % COMBINED SET OF POINTS, FOR BANDWIDTH
+    z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
     Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
     Hz_init = bandwidth(z, length(z));  % BANDWIDTH FOR ALL POINTS
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS

@@ -20,8 +20,8 @@ rng('default');
 %y = x*R + 3;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,5,5);
-b = linspace(0,5,5);
+a = linspace(0,5,4);
+b = linspace(0,5,4);
 [A, B] = meshgrid(a, b);
 
 x_old = [A(:) B(:)];
@@ -129,6 +129,22 @@ scatter(y(:,1), y(:,2), 'filled', 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 title('FINAL MAP')
 hold off
+
+% NEAREST NEIGHBOR SEARCH
+idk = knnsearch(T_map, y);
+new = [];
+for i = idk
+    new = [new; T_map(i,:)];
+end
+
+% PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
+figure()
+hold on
+scatter(new(:,1), new(:,2), 'filled', 'blue');
+scatter(y(:,1), y(:,2), 'filled', 'red');
+title('NEAREST NEIGHBORS RESULT')
+hold off
+
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
