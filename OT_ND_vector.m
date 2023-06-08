@@ -131,18 +131,30 @@ title('FINAL MAP')
 hold off
 
 % NEAREST NEIGHBOR SEARCH
-idk = knnsearch(T_map, y);
+idx = knnsearch(y, T_map);
 new = [];
-for i = idk
-    new = [new; T_map(i,:)];
+for i = idx
+    new = [new; y(i,:)];
 end
 
 % PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
 figure()
 hold on
-scatter(new(:,1), new(:,2), 'filled', 'blue');
-scatter(y(:,1), y(:,2), 'filled', 'red');
+scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
+scatter(new(:,1), new(:,2), 'filled', 'red');
 title('NEAREST NEIGHBORS RESULT')
+hold off
+
+% COMPARING TARGET SET BEFORE AND AFTER NEAREST NEIGHBORS SEARCH
+figure()
+hold on
+subplot(1, 2, 1);
+scatter(y(:,1), y(:,2), 'filled', 'red');
+title('INITIAL Y');
+
+subplot(1, 2, 2);
+scatter(new(:,1), new(:,2), 'filled', 'red');
+title('FINAL Y');
 hold off
 
 
