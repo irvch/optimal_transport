@@ -131,15 +131,27 @@ title('FINAL MAP')
 hold off
 
 % NEAREST NEIGHBOR SEARCH
-idk = knnsearch(T_map, y);
-new = T_map(idk,:);
+idk = knnsearch(y, T_map);
+new = y(idk,:);
 
 % PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
 figure()
 hold on
-scatter(new(:,1), new(:,2), 'filled', 'blue');
-scatter(y(:,1), y(:,2), 'filled', 'red');
+scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
+scatter(new(:,1), new(:,2), 'filled', 'red');
 title('NEAREST NEIGHBORS RESULT')
+hold off
+
+% COMPARING TARGET SET BEFORE AND AFTER NEAREST NEIGHBORS SEARCH
+figure()
+hold on
+subplot(1, 2, 1);
+scatter(y(:,1), y(:,2), 'filled', 'red');
+title('INITIAL Y');
+
+subplot(1, 2, 2);
+scatter(new(:,1), new(:,2), 'filled', 'red');
+title('FINAL Y');
 hold off
 
 
@@ -148,7 +160,6 @@ plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
-
 
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
