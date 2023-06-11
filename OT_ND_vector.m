@@ -132,10 +132,7 @@ hold off
 
 % NEAREST NEIGHBOR SEARCH
 idk = knnsearch(T_map, y);
-new = [];
-for i = idk
-    new = [new; T_map(i,:)];
-end
+new = T_map(idk,:);
 
 % PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
 figure()
