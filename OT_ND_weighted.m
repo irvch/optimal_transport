@@ -120,15 +120,27 @@ title('FINAL MAP')
 hold off
 
 % NEAREST NEIGHBOR SEARCH
-idk = knnsearch(T_map, y);
-new = T_map(idk,:);
+idk = knnsearch(y, T_map);
+new = y(idk,:);
 
 % PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
 figure()
 hold on
-scatter(new(:,1), new(:,2), 'filled', 'blue');
-scatter(y(:,1), y(:,2), 'filled', 'red');
+scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
+scatter(new(:,1), new(:,2), 'filled', 'red');
 title('NEAREST NEIGHBORS RESULT')
+hold off
+
+% COMPARING TARGET SET BEFORE AND AFTER NEAREST NEIGHBORS SEARCH
+figure()
+hold on
+subplot(1, 2, 1);
+scatter(y(:,1), y(:,2), 'filled', 'red');
+title('INITIAL Y');
+
+subplot(1, 2, 2);
+scatter(new(:,1), new(:,2), 'filled', 'red');
+title('FINAL Y');
 hold off
 
 
@@ -152,17 +164,19 @@ function H = bandwidth(x, n)
 end
 
 % COST FUNCTION C (RETURNS CONSTANT)
-function cost = C(x, Tx)
+function cost = C(x, Tx, weights)
     [n, d] = size(x);
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         cost = (norm(x - Tx)^2) / (2*n);
     else      % FOR MULTIDIMENSIONAL CASE
-        cost = (norm(x - Tx, 'fro')^2) / (2*n);
+        cost = sum(weights.*norm(x - Tx, 'fro')^2) / (2*n);             % OPTION ONE
+        %cost = sum(weights.*(x-Tx).^2, 'all') / (2*n*sum(weights));    % OPTION TWO
+        %cost = (norm(x - Tx, 'fro')^2) / (2*n);                        % WITHOUT WEIGHTS
     end
 end
 
 % TEST FUNCTION DEFINING DISTANCE BETWEEN MAP AND TARGET (RETURNS CONSTANT)
-function test = F(Tx1, y, Tx2, Hx, Hy)
+function test = F(Tx1, y, Tx2, Hx, Hy, axis)
     [n, d] = size(Tx1);
     m = length(y);
 
@@ -184,10 +198,10 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
-    f1 = sum(exp(-1/2.*sum(func1.^2, 1)), 'all');
-    f2 = sum(exp(-1/2.*sum(func2.^2, 1)), 'all');
-    f3 = sum(exp(-1/2.*sum(func3.^2, 1)), 'all');
-    f4 = sum(exp(-1/2.*sum(func4.^2, 1)), 'all');
+    f1 = sum(exp(-1/2.*sum(func1.^2, 1)), axis);
+    f2 = sum(exp(-1/2.*sum(func2.^2, 1)), axis);
+    f3 = sum(exp(-1/2.*sum(func3.^2, 1)), axis);
+    f4 = sum(exp(-1/2.*sum(func4.^2, 1)), axis);
     
     % CONSTANTS IN FRONT OF SUM
     const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
@@ -201,7 +215,8 @@ end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
 function l = L(x, y, Tx, Hx, Hy, lam)
-    l = C(x, Tx) + lam*(F(Tx, y, Tx, Hx, Hy));
+    weights = F(Tx, y, Tx, Hx, Hy, 3);
+    l = C(x, Tx, weights) + lam*(F(Tx, y, Tx, Hx, Hy, 'all'));
 end
 
 % GRADIENT OF COST (RETURNS 1xD VECTOR)
@@ -305,8 +320,9 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
-        L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz);
+        weights = F(Tx, y, Tx, Hz, Hz, 3);
+        L1_hist(i,:) = C(x, Tx, weights);
+        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz, 'all');
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
     end
 end
