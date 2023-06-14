@@ -41,12 +41,12 @@ runtime = toc;
 tic
 
 % PLOTTING INITIAL DISTRIBUTIONS
-figure()
-hold on
-scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-title('INITIAL')
-hold off
+%figure()
+%hold on
+%scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
+%scatter(y(:,1), y(:,2), 'filled', 'red')
+%title('INITIAL')
+%hold off
 
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()
@@ -175,8 +175,20 @@ function cost = C(x, Tx, weights)
     end
 end
 
+% WEIGHT FUNCTION USING MULTIDIMENSIONAL GAUSSIAN DENSITY
+function weights = Weights(x1, x2, Hx)
+    [n, d] = size(x1);
+    func1 = zeros(d,n,n);
+    for i = 1:d
+        func1(i,:,:) = (x1(:,i)' - x2(:,i))./Hx;
+    end
+    f1 = sum(exp(-1/2.*sum(func1.^2, 1)), 3);
+    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
+    weights = const1.*(f1)';
+end
+
 % TEST FUNCTION DEFINING DISTANCE BETWEEN MAP AND TARGET (RETURNS CONSTANT)
-function test = F(Tx1, y, Tx2, Hx, Hy, axis)
+function test = F(Tx1, y, Tx2, Hx, Hy, weights)
     [n, d] = size(Tx1);
     m = length(y);
 
@@ -198,42 +210,44 @@ function test = F(Tx1, y, Tx2, Hx, Hy, axis)
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
-    f1 = sum(exp(-1/2.*sum(func1.^2, 1)), axis);
-    f2 = sum(exp(-1/2.*sum(func2.^2, 1)), axis);
-    f3 = sum(exp(-1/2.*sum(func3.^2, 1)), axis);
-    f4 = sum(exp(-1/2.*sum(func4.^2, 1)), axis);
+    f1 = sum(weights.*exp(-1/2.*sum(func1.^2, 1)), 'all');
+    f2 = sum(weights.*exp(-1/2.*sum(func2.^2, 1)), 'all');
+    f3 = sum(weights.*exp(-1/2.*sum(func3.^2, 1)), 'all');
+    f4 = sum(weights.*exp(-1/2.*sum(func4.^2, 1)), 'all');
+
+    weight_sum = sum(weights);
     
     % CONSTANTS IN FRONT OF SUM
-    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
-    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d);
-    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d);
-    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d);
+    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * weight_sum);
+    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d * weight_sum);
+    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d * weight_sum);
+    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d * weight_sum);
     
     % FINAL RESULT MULTIPLYING CONSTANTS
     test = const1.*(f1)' - const2.*(f2)' - const3.*(f3)' + const4.*(f4)';
 end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
-function l = L(x, y, Tx, Hx, Hy, lam)
-    weights = F(Tx, y, Tx, Hx, Hy, 3);
-    l = C(x, Tx, weights) + lam*(F(Tx, y, Tx, Hx, Hy, 'all'));
+function l = L(x, y, Tx, Hx, Hy, lam, weights)
+    l = C(x, Tx, weights) + lam*(F(Tx, y, Tx, Hx, Hy, weights));
 end
 
 % GRADIENT OF COST (RETURNS 1xD VECTOR)
-function gradC = C_grad(x, Tx)
+function gradC = C_grad(x, Tx, weights)
     [n, d] = size(x);
 
     % INITIALIZE L GRADIENT TO ZEROS
-    gradC = zeros(n,d);
+    cgrad = zeros(n,d);
 
     % ADD VALUE TO L GRADIENT MATRIX AT EACH I
     for i = 1:n
-        gradC(i,:) = (Tx(i,:) - x(i,:)) ./ length(x(i,:));
+        cgrad(i,:) = (Tx(i,:) - x(i,:)) ./ length(x(i,:));
     end
+    gradC = weights .* cgrad;
 end
 
 % GRADIENT OF TEST FUNCTION TAKEN WITH RESPECT TO Tx CENTER
-function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
+function gradF = F_grad(Tx1, y, Tx2, Hx, Hy, weights)
     [n, d] = size(Tx1);
     m = length(y);
 
@@ -251,34 +265,36 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     f1 = sum(func1.*exp(-1/2.*sum(func1.^2, 1)), 3);
     f2 = sum(func2.*exp(-1/2.*sum(func2.^2, 1)), 3);
 
+    weight_sum = sum(weights);
+
     % CONSTANTS IN FRONT OF SUM
-    c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx);
-    c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy);
+    c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx * weight_sum);
+    c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy * weight_sum);
     
     % FINAL GRADIENT VALUE
-    gradF = c1.*(f1)' - c2.*(f2)';
+    gradF = weights.*(c1.*(f1)' - c2.*(f2)');
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
-function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
-    gradL = C_grad(x, Tx) + lam * F_grad(Tx, y, Tx, Hx, Hy);
+function gradL = L_grad(x, y, Tx, Hx, Hy, lam, weights)
+    gradL = C_grad(x, Tx, weights) + lam * F_grad(Tx, y, Tx, Hx, Hy, weights);
 end
 
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
-function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
-    eta = eta * 2;                                                        % INCREASE ETA FOR FASTER CONVERGENCE
-    Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam));      % COMPUTE NEW MAP TX
-    L_curr = L(x, y, Tx_curr, Hx, Hy, lam);                               % COMPUTE COST BASED ON PAST MAP
-    L_next = L(x, y, Tx_next, Hx, Hy, lam);                               % COMPUTE COST BASED ON NEW MAP
+function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, weights)
+    eta = eta * 2;                                                                 % INCREASE ETA FOR FASTER CONVERGENCE
+    Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights));      % COMPUTE NEW MAP TX
+    L_curr = L(x, y, Tx_curr, Hx, Hy, lam, weights);                               % COMPUTE COST BASED ON PAST MAP
+    L_next = L(x, y, Tx_next, Hx, Hy, lam, weights);                               % COMPUTE COST BASED ON NEW MAP
     max_while = 5;
     while L_curr < L_next % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
         if max_while < 0  % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
             break
         end
-        eta = eta / 2;                                                    % SHRINK STEP SIZE
-        Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam));  % COMPUTE NEW MAP TX WITH NEW ETA
-        L_next = L(x, y, Tx_next, Hx, Hy, lam);                           % COMPUTE COST BASED ON NEW MAP
-        max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
+        eta = eta / 2;                                                             % SHRINK STEP SIZE
+        Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights));  % COMPUTE NEW MAP TX WITH NEW ETA
+        L_next = L(x, y, Tx_next, Hx, Hy, lam, weights);                           % COMPUTE COST BASED ON NEW MAP
+        max_while = max_while - 1;                                                 % KEEP TRACK OF WHILE-LOOP LENGTH
     end
 end
 
@@ -314,15 +330,17 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lam_init, lam_final);
 
+        % WEIGHTS OF EACH PIXEL BASED ON POSITION IN DENSITY PLOT
+        weights = Weights(Tx, Tx, Hz);
+
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
-        [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
+        [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, weights);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
-        weights = F(Tx, y, Tx, Hz, Hz, 3);
         L1_hist(i,:) = C(x, Tx, weights);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz, 'all');
+        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz, weights);
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
     end
 end

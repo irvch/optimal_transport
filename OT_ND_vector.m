@@ -20,29 +20,16 @@ rng('default');
 %y = x*R + 3;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-%a = linspace(0,5,4);
-%b = linspace(0,5,4);
-%[A, B] = meshgrid(a, b);
+a = linspace(0,5,5);
+b = linspace(0,5,5);
+[A, B] = meshgrid(a, b);
 
-%x_old = [A(:) B(:)];
-%y = normrnd(2, 0.5, [25,2]);
+x_old = [A(:) B(:)];
+y = normrnd(2, 0.5, [25,2]);
 
 % PRECONDITIONING
-%x1 = (x_old).*std(y)./std(x_old);
-%x = x1 - mean(x1) + mean(y);
-
-% GRID SHAPED SOURCE POINTS
-a1 = linspace(0,5,4);
-a2 = linspace(0,5,4);
-[A1, A2] = meshgrid(a1, a2);
-%x_old = [A1(:) A2(:)];
-x = [A1(:) A2(:)];
-
-% GRID SHAPED TARGET POINTS
-b1 = linspace(1,6,4);
-b2 = linspace(1,6,4);
-[B1, B2] = meshgrid(b1, b2);
-y = [B1(:) B2(:)];
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
 
 % STARTING PARAMETERS
 eta_init = 0.1;
