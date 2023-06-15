@@ -5,31 +5,18 @@ rng('default');
 %x = normrnd(0, 0.5, [100,2]);
 %y = x * 2;
 
-% SYNTHETIC DATA IN THE SHAPE OF A CIRCLE
-%Y1 = [];
-%Y2 = [];
-%for i = 0:24
-%    Y1 = [Y1; cos(2*pi/20*i)*4];
-%    Y2 = [Y2; sin(2*pi/20*i)*4];
-%end
-%y = [Y1 Y2];
-
-% TARGET POINTS ARE A SIMPLE ROTATION AND TRANSLATION OF SOURCE POINTS
-%theta = pi/3;
-%R = [cos(theta) -sin(theta); sin(theta) cos(theta)];
-%y = x*R + 3;
-
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,5,5);
-b = linspace(0,5,5);
-[A, B] = meshgrid(a, b);
+%a = linspace(0,5,5);
+%b = linspace(0,5,5);
+%[A, B] = meshgrid(a, b);
 
-x_old = [A(:) B(:)];
-y = normrnd(2, 0.5, [25,2]);
+
+%x_old = [A(:) B(:)];
+%y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
+%x1 = (x_old).*std(y)./std(x_old);
+%x = x1 - mean(x1) + mean(y);
 
 % STARTING PARAMETERS
 eta_init = 0.1;
@@ -52,12 +39,12 @@ runtime = toc;
 tic
 
 % PLOTTING INITIAL DISTRIBUTIONS
-figure()
-hold on
-scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-title('INITIAL')
-hold off
+%figure()
+%hold on
+%scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
+%scatter(y(:,1), y(:,2), 'filled', 'red')
+%title('INITIAL')
+%hold off
 
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()

@@ -4,21 +4,39 @@
 rng('default');
 
 % GRID SHAPED SOURCE POINTS
-a1 = linspace(0,5,4);
-a2 = linspace(0,5,4);
+a1 = linspace(-5,0,4);
+a2 = linspace(-5,0,4);
 [A1, A2] = meshgrid(a1, a2);
 %x_old = [A1(:) A2(:)];
 x = [A1(:) A2(:)];
 
 % GRID SHAPED TARGET POINTS
-b1 = linspace(1,6,4);
-b2 = linspace(1,6,4);
+b1 = linspace(1,9,4);
+b2 = linspace(1,9,4);
 [B1, B2] = meshgrid(b1, b2);
 y = [B1(:) B2(:)];
 
 % PRECONDITIONING
 %x1 = (x_old).*std(y)./std(x_old);
 %x = x1 - mean(x1) + mean(y);
+
+y = zeros(20,2);
+for i = 1:10
+    y(i,:) = [i,1];
+end
+
+for i = 1:10
+    y(i+10, :) = [i,i];
+end
+
+x = zeros(10,2);
+for i = 1:5
+    x(i,:) = [i*2-1,1];
+end
+
+for i = 1:5
+    x(i+5, :) = [i*2-1,i*2-1];
+end
 
 % STARTING PARAMETERS
 eta_init = 0.1;
