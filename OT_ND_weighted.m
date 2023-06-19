@@ -20,23 +20,23 @@ y = [B1(:) B2(:)];
 %x1 = (x_old).*std(y)./std(x_old);
 %x = x1 - mean(x1) + mean(y);
 
-y = zeros(20,2);
-for i = 1:10
-    y(i,:) = [i,1];
-end
+%y = zeros(20,2);
+%for i = 1:10
+%    y(i,:) = [i,1];
+%end
 
-for i = 1:10
-    y(i+10, :) = [i,i];
-end
+%for i = 1:10
+%    y(i+10, :) = [i,i];
+%end
 
-x = zeros(10,2);
-for i = 1:5
-    x(i,:) = [i*2-1,1];
-end
+%x = zeros(10,2);
+%for i = 1:5
+%    x(i,:) = [i*2-1,1];
+%end
 
-for i = 1:5
-    x(i+5, :) = [i*2-1,i*2-1];
-end
+%for i = 1:5
+%    x(i+5, :) = [i*2-1,i*2-1];
+%end
 
 % STARTING PARAMETERS
 eta_init = 0.1;
@@ -169,15 +169,14 @@ disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 
 
-
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
 function H = bandwidth(x, n)
     [~, d] = size(x);                               
     if d == 1 % FOR ONE-DIMENSIONAL CASE
-        H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
+        H = 0.9*min(std2(x), iqr(x)/1.34)*n^(-1/5);
     else      % FOR MULTIDIMENSIONAL CASE
-        H = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        H = mean(std2(x))*(4/((d+2)*n))^(1/(d+4));
     end
 end
 

@@ -6,17 +6,16 @@ rng('default');
 %y = x * 2;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-%a = linspace(0,5,5);
-%b = linspace(0,5,5);
-%[A, B] = meshgrid(a, b);
+a = linspace(0,5,5);
+b = linspace(0,5,5);
+[A, B] = meshgrid(a, b);
 
-
-%x_old = [A(:) B(:)];
-%y = normrnd(7, 0.5, [25,2]);
+x_old = [A(:) B(:)];
+y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
-%x1 = (x_old).*std(y)./std(x_old);
-%x = x1 - mean(x1) + mean(y);
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
 
 % STARTING PARAMETERS
 eta_init = 0.1;
