@@ -108,9 +108,7 @@ function cost = C(x, Tx, weights)
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         cost = (norm(x - Tx)^2) / (2*n);
     else      % FOR MULTIDIMENSIONAL CASE
-        cost = sum(weights.*norm(x - Tx, 'fro')^2) / (2*n);             % OPTION ONE
-        %cost = sum(weights.*(x-Tx).^2, 'all') / (2*n*sum(weights));    % OPTION TWO
-        %cost = (norm(x - Tx, 'fro')^2) / (2*n);                        % WITHOUT WEIGHTS
+        cost = sum(weights.*norm(x - Tx, 'fro')^2) / (2*n);
     end
 end
 

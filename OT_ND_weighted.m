@@ -4,43 +4,29 @@
 rng('default');
 
 % GRID SHAPED SOURCE POINTS
-a1 = linspace(-5,0,4);
-a2 = linspace(-5,0,4);
-[A1, A2] = meshgrid(a1, a2);
+%a1 = linspace(-5,0,4);
+%a2 = linspace(-5,0,4);
+%[A1, A2] = meshgrid(a1, a2);
 %x_old = [A1(:) A2(:)];
-x = [A1(:) A2(:)];
+%x = [A1(:) A2(:)];
 
 % GRID SHAPED TARGET POINTS
-b1 = linspace(1,9,4);
-b2 = linspace(1,9,4);
-[B1, B2] = meshgrid(b1, b2);
-y = [B1(:) B2(:)];
+%b1 = linspace(1,9,4);
+%b2 = linspace(1,9,4);
+%[B1, B2] = meshgrid(b1, b2);
+%y = [B1(:) B2(:)];
+
+x = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+y = table2array(readtable('revised data set 1.xlsx', Sheet='every (2)'));
+
 
 % PRECONDITIONING
 %x1 = (x_old).*std(y)./std(x_old);
 %x = x1 - mean(x1) + mean(y);
 
-%y = zeros(20,2);
-%for i = 1:10
-%    y(i,:) = [i,1];
-%end
-
-%for i = 1:10
-%    y(i+10, :) = [i,i];
-%end
-
-%x = zeros(10,2);
-%for i = 1:5
-%    x(i,:) = [i*2-1,1];
-%end
-
-%for i = 1:5
-%    x(i+5, :) = [i*2-1,i*2-1];
-%end
-
 % STARTING PARAMETERS
 eta_init = 0.1;
-iter_num = 500;
+iter_num = 20;
 iters = 1:iter_num;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
@@ -59,19 +45,17 @@ runtime = toc;
 tic
 
 % PLOTTING INITIAL DISTRIBUTIONS
-%figure()
-%hold on
-%scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-%scatter(y(:,1), y(:,2), 'filled', 'red')
-%title('INITIAL')
-%hold off
+figure()
+hold on
+scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+title('SOURCE')
+hold off
 
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()
 hold on
-scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-title('PRECONDITIONED')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+title('TARGET')
 hold off
 
 figure()
@@ -102,19 +86,19 @@ figure()
 hold on
 count = 1;
 for i = 1:iter_num
-    if mod(i, floor(iter_num/25)) == 0
-        T_map = T_hist(:,:,i);
-        subplot(5, 5, count)
-        hold on
-        scatter(y(:,1), y(:,2), 'filled', 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
-        iterations = sprintf('ITERS: %d', i);
-        title(iterations)
-        hold off
-        if count < 25
-            count = count + 1;
-        end
-    end
+%    if mod(i, floor(iter_num/25)) == 0
+    T_map = T_hist(:,:,i);
+    subplot(5, 5, count)
+    hold on
+    scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+    scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
+    iterations = sprintf('ITERS: %d', i);
+    title(iterations)
+    hold off
+%    if count < 25
+%        count = count + 1;
+%    end
+%    end
 end
 hold off
 
@@ -125,41 +109,41 @@ for i = 1:iter_num
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
-        plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
+        plot3([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], [T_map_i1(j,3) T_map_i2(j,3)], color = 'green')
     end
 end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
 
 % NEAREST NEIGHBOR SEARCH
-idk = knnsearch(y, T_map);
-new = y(idk,:);
+%idk = knnsearch(T_map, y);
+%new = T_map(idk,:);
 
 % PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
-figure()
-hold on
-scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
-scatter(new(:,1), new(:,2), 'filled', 'red');
-title('NEAREST NEIGHBORS RESULT')
-hold off
+%figure()
+%hold on
+%scatter3(new(:,1), new(:,2), new(:,3), 'filled', 'green')
+%scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
+%title('NEAREST NEIGHBORS RESULT')
+%hold off
 
 % COMPARING TARGET SET BEFORE AND AFTER NEAREST NEIGHBORS SEARCH
-figure()
-hold on
-subplot(1, 2, 1);
-scatter(y(:,1), y(:,2), 'filled', 'red');
-title('INITIAL Y');
+%figure()
+%hold on
+%subplot(1, 2, 1);
+%scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+%title('INITIAL Y');
 
-subplot(1, 2, 2);
-scatter(new(:,1), new(:,2), 'filled', 'red');
-title('FINAL Y');
-hold off
+%subplot(1, 2, 2);
+%scatter3(new(:,1), new(:,2), new(:,3), 'filled', 'green');
+%title('FINAL');
+%hold off
 
 
 % END TIMER AND DISPLAY RUNTIME
@@ -340,7 +324,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     % LOOP OVER ITERATIONS
     for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(i, 100) == 0
+        if mod(i, 1) == 0
             fprintf("Iteration: %d\n", i)
         end
 
