@@ -5,18 +5,6 @@ rng('default');
 %x = normrnd(0, 0.5, [100,2]);
 %y = x * 2;
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,4,5);
-b = linspace(0,4,5);
-[A, B] = meshgrid(a, b);
-
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [50,2]);
-
-% PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
-
 % STARTING PARAMETERS
 eta_init = 0.1;
 iter_num = 500;
@@ -25,15 +13,34 @@ H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
-% START TIMER FOR ALGORITHM
-tic
+time_hist = zeros(30,1);
+for i = 1:30
+    disp(i)
 
-% RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
+    % SYNTHETIC DATA IN THE SHAPE OF A GRID 
+    a = linspace(0,4,i);
+    b = linspace(0,4,i);
+    [A, B] = meshgrid(a, b);
+    
+    x_old = [A(:) B(:)];
+    y = normrnd(7, 0.5, [i^2,2]);
+    
+    % PRECONDITIONING
+    x1 = (x_old).*std(y)./std(x_old);
+    x = x1 - mean(x1) + mean(y);
+    
+    % START TIMER FOR ALGORITHM
+    tic
+    
+    % RUNNING GRADIENT DESCENT
+    [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
+    
+    % MAP RUNTIME
+    runtime = toc;
+    time_hist(i,:) = runtime;
+end
 
-% MAP RUNTIME
-runtime = toc;
-
+%{
 % START TIMER FOR PLOTTING
 tic
 
@@ -146,7 +153,7 @@ plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
-
+%}
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
@@ -260,18 +267,19 @@ end
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
 function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
     eta = eta * 2;                                                        % INCREASE ETA FOR FASTER CONVERGENCE
-    Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam));      % COMPUTE NEW MAP TX
+    l_grad = L_grad(x, y, Tx_curr, Hx, Hy, lam);
+    Tx_next = Tx_curr - (eta .* l_grad);                                  % COMPUTE NEW MAP TX
     L_curr = L(x, y, Tx_curr, Hx, Hy, lam);                               % COMPUTE COST BASED ON PAST MAP
     L_next = L(x, y, Tx_next, Hx, Hy, lam);                               % COMPUTE COST BASED ON NEW MAP
-    max_while = 5;
+    %max_while = 5;
     while L_curr < L_next % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
-        if max_while < 0  % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
-            break
-        end
+        %if max_while < 0  % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
+        %    break
+        %end                        
         eta = eta / 2;                                                    % SHRINK STEP SIZE
-        Tx_next = Tx_curr - (eta .* L_grad(x, y, Tx_curr, Hx, Hy, lam));  % COMPUTE NEW MAP TX WITH NEW ETA
+        Tx_next = Tx_curr - (eta .* l_grad);                              % COMPUTE NEW MAP TX WITH NEW ETA
         L_next = L(x, y, Tx_next, Hx, Hy, lam);                           % COMPUTE COST BASED ON NEW MAP
-        max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
+        %max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
     end
 end
 
