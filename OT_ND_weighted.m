@@ -16,9 +16,10 @@ rng('default');
 %[B1, B2] = meshgrid(b1, b2);
 %y = [B1(:) B2(:)];
 
-x = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
-y = table2array(readtable('revised data set 1.xlsx', Sheet='every (2)'));
-
+y = table2array(readtable('revised data edit.xlsx', Sheet='every'));
+x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every (4)'));
 
 % PRECONDITIONING
 %x1 = (x_old).*std(y)./std(x_old);
@@ -84,11 +85,10 @@ hold off
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
 hold on
-count = 1;
 for i = 1:iter_num
 %    if mod(i, floor(iter_num/25)) == 0
     T_map = T_hist(:,:,i);
-    subplot(5, 5, count)
+    subplot(5, 4, i)
     hold on
     scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
     scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
@@ -115,8 +115,8 @@ end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
-scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+%scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+%scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
 scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
@@ -170,9 +170,7 @@ function cost = C(x, Tx, weights)
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         cost = (norm(x - Tx)^2) / (2*n);
     else      % FOR MULTIDIMENSIONAL CASE
-        cost = sum(weights.*norm(x - Tx, 'fro')^2) / (2*n);             % OPTION ONE
-        %cost = sum(weights.*(x-Tx).^2, 'all') / (2*n*sum(weights));    % OPTION TWO
-        %cost = (norm(x - Tx, 'fro')^2) / (2*n);                        % WITHOUT WEIGHTS
+        cost = sum(weights.*norm(x - Tx, 'fro')^2) / (2*n);
     end
 end
 
