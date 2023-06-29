@@ -6,12 +6,12 @@ rng('default');
 %y = x * 2;
 
 % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,5,5);
-b = linspace(0,5,5);
+a = linspace(0,4,5);
+b = linspace(0,4,5);
 [A, B] = meshgrid(a, b);
 
 x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [25,2]);
+y = normrnd(7, 0.5, [50,2]);
 
 % PRECONDITIONING
 x1 = (x_old).*std(y)./std(x_old);
@@ -38,12 +38,12 @@ runtime = toc;
 tic
 
 % PLOTTING INITIAL DISTRIBUTIONS
-%figure()
-%hold on
-%scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-%scatter(y(:,1), y(:,2), 'filled', 'red')
-%title('INITIAL')
-%hold off
+figure()
+hold on
+scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
+scatter(y(:,1), y(:,2), 'filled', 'red')
+title('INITIAL')
+hold off
 
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()
@@ -110,7 +110,7 @@ end
 
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
-scatter(x(:,1), x(:,2), 'filled', 'blue')
+%scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 title('FINAL MAP')
