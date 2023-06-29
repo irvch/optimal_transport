@@ -5,27 +5,31 @@ rng('default');
 %x = normrnd(0, 0.5, [100,2]);
 %y = x * 2;
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,4,5);
-b = linspace(0,4,5);
-[A, B] = meshgrid(a, b);
-
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [50,2]);
-
-% PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
-
 % STARTING PARAMETERS
 eta_init = 0.1;
 beta1 = 0.9;
 beta2 = 0.9;
-iter_num = 500;
+iter_num = 200;
 iters = 1:iter_num;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+
+%time_hist = zeros(30,1);
+%for i = 1:30
+%    disp(i)
+
+% SYNTHETIC DATA IN THE SHAPE OF A GRID
+a = linspace(0,4,10);
+b = linspace(0,4,10);
+[A, B] = meshgrid(a, b);
+
+x_old = [A(:) B(:)];
+y = normrnd(7, 0.5, [100,2]);
+
+% PRECONDITIONING
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
 
 % START TIMER FOR ALGORITHM
 tic
@@ -35,6 +39,8 @@ tic
 
 % MAP RUNTIME
 runtime = toc;
+%    time_hist(i,:) = runtime;
+%end
 
 % START TIMER FOR PLOTTING
 tic
@@ -262,26 +268,23 @@ end
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
 function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr, v_curr, beta1, beta2, iter)
     eta = eta * 2;                                                        % INCREASE ETA FOR FASTER CONVERGENCE
-    m_next = beta1 .* m_curr + (1-beta1) .* L_grad(x, y, Tx_curr, Hx, Hy, lam);
-    v_next = beta2 .* v_curr + (1-beta2) .* L_grad(x, y, Tx_curr, Hx, Hy, lam).^2;
-    m_hat = (1/(1-beta1^iter)) .* m_next;
-    v_hat = (1/(1-beta2^iter)) .* v_next;
-    Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 0.94));             % COMPUTE NEW MAP TX
+    l_grad = L_grad(x, y, Tx_curr, Hx, Hy, lam);
+    m_next = beta1 .* m_curr + (1-beta1) .* l_grad;
+    v_next = beta2 .* v_curr + (1-beta2) .* l_grad.^2;
+    m_hat = m_next / (1-beta1^iter);
+    v_hat = v_next / (1-beta2^iter);
+    Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));             % COMPUTE NEW MAP TX
     L_curr = L(x, y, Tx_curr, Hx, Hy, lam);                               % COMPUTE COST BASED ON PAST MAP
     L_next = L(x, y, Tx_next, Hx, Hy, lam);                               % COMPUTE COST BASED ON NEW MAP
-    max_while = 5;
-    while L_curr < L_next % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
-        if max_while < 0  % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
-            break
-        end
+    %max_while = 5;
+    while L_curr < L_next          % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
+        %if max_while < 0          % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
+        %    break
+        %end
         eta = eta / 2;                                                    % SHRINK STEP SIZE
-        m_next = beta1 .* m_curr + (1-beta1) .* L_grad(x, y, Tx_curr, Hx, Hy, lam);
-        v_next = beta2 .* v_curr + (1-beta2) .* L_grad(x, y, Tx_curr, Hx, Hy, lam).^2;
-        m_hat = (1/(1-beta1^iter)) .* m_next;
-        v_hat = (1/(1-beta2^iter)) .* v_next;
-        Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 0.94));             % COMPUTE NEW MAP TX
+        Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));         % COMPUTE NEW MAP TX
         L_next = L(x, y, Tx_next, Hx, Hy, lam);                           % COMPUTE COST BASED ON NEW MAP
-        max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
+        %max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
     end
 end
 
