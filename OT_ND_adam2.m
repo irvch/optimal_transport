@@ -17,8 +17,8 @@ rng('default');
 %y = [B1(:) B2(:)];
 
 y = table2array(readtable('revised data edit.xlsx', Sheet='every'));
-x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
+x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
 %y = table2array(readtable('revised data set 1.xlsx', Sheet='every (4)'));
 
 % PRECONDITIONING
@@ -118,7 +118,7 @@ end
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
 %scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
-%scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
 scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
@@ -284,8 +284,9 @@ end
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
 function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr, v_curr, beta1, beta2, iter, weights)
     eta = eta * 2;                                                        % INCREASE ETA FOR FASTER CONVERGENCE
-    m_next = beta1 .* m_curr + (1-beta1) .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights);
-    v_next = beta2 .* v_curr + (1-beta2) .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights).^2;
+    l_grad = L_grad(x, y, Tx_curr, Hx, Hy, lam, weights);
+    m_next = beta1 .* m_curr + (1-beta1) .* l_grad;
+    v_next = beta2 .* v_curr + (1-beta2) .* l_grad;
     m_hat = (1/(1-beta1^iter)) .* m_next;
     v_hat = (1/(1-beta2^iter)) .* v_next;
     Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));             % COMPUTE NEW MAP TX
@@ -297,10 +298,6 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr
             break
         end
         eta = eta / 2;                                                    % SHRINK STEP SIZE
-        m_next = beta1 .* m_curr + (1-beta1) .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights);
-        v_next = beta2 .* v_curr + (1-beta2) .* L_grad(x, y, Tx_curr, Hx, Hy, lam, weights).^2;
-        m_hat = (1/(1-beta1^iter)) .* m_next;
-        v_hat = (1/(1-beta2^iter)) .* v_next;
         Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));             % COMPUTE NEW MAP TX
         L_next = L(x, y, Tx_next, Hx, Hy, lam, weights);                      % COMPUTE COST BASED ON NEW MAP
         max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
@@ -335,7 +332,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     % LOOP OVER ITERATIONS
     for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(i, 100) == 0
+        if mod(i, 1) == 0
             fprintf("Iteration: %d\n", i)
         end
 

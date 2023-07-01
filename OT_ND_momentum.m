@@ -8,7 +8,7 @@ rng('default');
 % STARTING PARAMETERS
 eta_init = 0.1;
 beta = 0.9;
-iter_num = 200;
+iter_num = 500;
 iters = 1:iter_num;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 

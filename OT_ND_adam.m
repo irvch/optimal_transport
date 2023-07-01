@@ -9,39 +9,40 @@ rng('default');
 eta_init = 0.1;
 beta1 = 0.9;
 beta2 = 0.9;
-iter_num = 200;
+iter_num = 500;
 iters = 1:iter_num;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
-%time_hist = zeros(30,1);
-%for i = 1:30
-%    disp(i)
+time_hist = zeros(30,1);
+for i = 1:30
+    disp(i)
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID
-a = linspace(0,4,10);
-b = linspace(0,4,10);
-[A, B] = meshgrid(a, b);
+    % SYNTHETIC DATA IN THE SHAPE OF A GRID
+    a = linspace(0,4,i);
+    b = linspace(0,4,i);
+    [A, B] = meshgrid(a, b);
+    
+    x_old = [A(:) B(:)];
+    y = normrnd(7, 0.5, [i^2,2]);
+    
+    % PRECONDITIONING
+    x1 = (x_old).*std(y)./std(x_old);
+    x = x1 - mean(x1) + mean(y);
+    
+    % START TIMER FOR ALGORITHM
+    tic
+    
+    % RUNNING GRADIENT DESCENT
+    [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda_init, lambda_final);
+    
+    % MAP RUNTIME
+    runtime = toc;
+    time_hist(i,:) = runtime;
+end
 
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [100,2]);
-
-% PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
-
-% START TIMER FOR ALGORITHM
-tic
-
-% RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda_init, lambda_final);
-
-% MAP RUNTIME
-runtime = toc;
-%    time_hist(i,:) = runtime;
-%end
-
+%{
 % START TIMER FOR PLOTTING
 tic
 
@@ -154,7 +155,7 @@ plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
-
+%}
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB

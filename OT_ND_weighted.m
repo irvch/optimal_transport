@@ -17,8 +17,8 @@ rng('default');
 %y = [B1(:) B2(:)];
 
 y = table2array(readtable('revised data edit.xlsx', Sheet='every'));
-x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
+x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
 %y = table2array(readtable('revised data set 1.xlsx', Sheet='every (4)'));
 
 % PRECONDITIONING
@@ -27,9 +27,9 @@ x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
 
 % STARTING PARAMETERS
 eta_init = 0.1;
-iter_num = 20;
+iter_num = 10;
 iters = 1:iter_num;
-H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
+H_const = 20;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
@@ -116,7 +116,7 @@ end
 % PLOTTING FINAL OPTIMAL MAP
 T_map = T_hist(:,:,iter_num+1);
 %scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
-%scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
 scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
