@@ -277,15 +277,10 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr
     Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));             % COMPUTE NEW MAP TX
     L_curr = L(x, y, Tx_curr, Hx, Hy, lam);                               % COMPUTE COST BASED ON PAST MAP
     L_next = L(x, y, Tx_next, Hx, Hy, lam);                               % COMPUTE COST BASED ON NEW MAP
-    %max_while = 5;
     while L_curr < L_next          % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
-        %if max_while < 0          % MAX LENGTH OF LOOP SHOULD NOT EXCEED 5 OR ETA WILL BECOME TOO SMALL
-        %    break
-        %end
         eta = eta / 2;                                                    % SHRINK STEP SIZE
         Tx_next = Tx_curr - (eta .* m_hat ./ sqrt(v_hat + 1e-8));         % COMPUTE NEW MAP TX
         L_next = L(x, y, Tx_next, Hx, Hy, lam);                           % COMPUTE COST BASED ON NEW MAP
-        %max_while = max_while - 1;                                        % KEEP TRACK OF WHILE-LOOP LENGTH
     end
 end
 
