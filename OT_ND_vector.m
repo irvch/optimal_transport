@@ -14,33 +14,32 @@ lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 time_hist = zeros(30,1);
-for i = 1:30
-    disp(i)
+%for i = 1:30
+%disp(i)
 
-    % SYNTHETIC DATA IN THE SHAPE OF A GRID 
-    a = linspace(0,4,i);
-    b = linspace(0,4,i);
-    [A, B] = meshgrid(a, b);
-    
-    x_old = [A(:) B(:)];
-    y = normrnd(7, 0.5, [i^2,2]);
-    
-    % PRECONDITIONING
-    x1 = (x_old).*std(y)./std(x_old);
-    x = x1 - mean(x1) + mean(y);
-    
-    % START TIMER FOR ALGORITHM
-    tic
-    
-    % RUNNING GRADIENT DESCENT
-    [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
-    
-    % MAP RUNTIME
-    runtime = toc;
-    time_hist(i,:) = runtime;
-end
+% SYNTHETIC DATA IN THE SHAPE OF A GRID 
+a = linspace(0,4,5);
+b = linspace(0,4,5);
+[A, B] = meshgrid(a, b);
 
-%{
+x_old = [A(:) B(:)];
+y = normrnd(7, 0.5, [5^2,2]);
+
+% PRECONDITIONING
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
+
+% START TIMER FOR ALGORITHM
+tic
+
+% RUNNING GRADIENT DESCENT
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
+
+% MAP RUNTIME
+runtime = toc;
+%time_hist(i,:) = runtime;
+%end
+
 % START TIMER FOR PLOTTING
 tic
 
@@ -281,7 +280,8 @@ end
 % LINEARLY INCREASING LAMBDA AND DECREASING BANDWIDTH (RETURNS DxD MATRIX)
 function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam_final)
     Hz_new = (H_const * Hz * (it - i) / it) + (Hy * i / it);
-    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it); 
+    lam_new = lam_final;
+%    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it);
 end
 
 % GRADIENT DESCENT
@@ -317,7 +317,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz);
+        L2_hist(i,:) = F(Tx, y, Tx, Hz_init, Hy);
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
     end
 end

@@ -7,6 +7,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta_init = 0.1;
+alpha = 1000;
 beta1 = 0.9;
 beta2 = 0.9;
 iter_num = 500;
@@ -16,33 +17,32 @@ lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 time_hist = zeros(30,1);
-for i = 1:30
-    disp(i)
+%for i = 1:30
+%    disp(i)
 
-    % SYNTHETIC DATA IN THE SHAPE OF A GRID
-    a = linspace(0,4,i);
-    b = linspace(0,4,i);
-    [A, B] = meshgrid(a, b);
-    
-    x_old = [A(:) B(:)];
-    y = normrnd(7, 0.5, [i^2,2]);
-    
-    % PRECONDITIONING
-    x1 = (x_old).*std(y)./std(x_old);
-    x = x1 - mean(x1) + mean(y);
-    
-    % START TIMER FOR ALGORITHM
-    tic
-    
-    % RUNNING GRADIENT DESCENT
-    [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda_init, lambda_final);
-    
-    % MAP RUNTIME
-    runtime = toc;
-    time_hist(i,:) = runtime;
-end
+% SYNTHETIC DATA IN THE SHAPE OF A GRID
+a = linspace(0,4,5);
+b = linspace(0,4,5);
+[A, B] = meshgrid(a, b);
 
-%{
+x_old = [A(:) B(:)];
+y = normrnd(7, 0.5, [5^2,2]);
+
+% PRECONDITIONING
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
+
+% START TIMER FOR ALGORITHM
+tic
+
+% RUNNING GRADIENT DESCENT
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda_init, lambda_final, alpha);
+
+% MAP RUNTIME
+runtime = toc;
+%    time_hist(i,:) = runtime;
+%end
+
 % START TIMER FOR PLOTTING
 tic
 
@@ -84,6 +84,11 @@ subplot(2, 2, 4)
 plot(iters, eta_hist, '-')
 title('ETA')
 hold off
+
+% PLOT LAMBDA HISTORY
+figure()
+plot(iters, lam_hist, '-')
+title('LAMBDA')
 
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
@@ -287,11 +292,12 @@ end
 % LINEARLY INCREASING LAMBDA AND DECREASING BANDWIDTH (RETURNS DxD MATRIX)
 function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam_final)
     Hz_new = (H_const * Hz * (it - i) / it) + (Hy * i / it);
-    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it); 
+    lam_new = lam_final;
+%    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it);
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, beta1, beta2, iter_num, H_const, lam_init, lam_final)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, beta1, beta2, iter_num, H_const, lam_init, lam_final, alpha)
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = x; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
@@ -325,7 +331,16 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz);
+        L2_hist(i,:) = F(Tx, y, Tx, Hz_init, Hy);
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
     end
 end
+
+%{
+% ADAPTIVE LAMBDA - DOESN'T WORK
+function lambda = adapt_lambda(x, y, Tx, Hx, Hy, alpha)
+    top = alpha - (norm(C_grad(x, Tx) - F_grad(Tx, y, Tx, Hx, Hy), 'fro')^2);
+    bottom = norm(F_grad(Tx, y, Tx, Hx, Hy), 'fro')^2;
+    lambda = top / bottom;
+end
+%}
