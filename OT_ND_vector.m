@@ -2,13 +2,10 @@
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-%x = normrnd(0, 0.5, [100,2]);
-%y = x * 2;
 
 % STARTING PARAMETERS
 eta_init = 0.1;
 iter_num = 500;
-iters = 1:iter_num;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
@@ -29,20 +26,6 @@ y = normrnd(7, 0.5, [5^2,2]);
 x1 = (x_old).*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
 
-% START TIMER FOR ALGORITHM
-tic
-
-% RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
-
-% MAP RUNTIME
-runtime = toc;
-%time_hist(i,:) = runtime;
-%end
-
-% START TIMER FOR PLOTTING
-tic
-
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
@@ -58,6 +41,22 @@ scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 title('PRECONDITIONED')
 hold off
+
+
+% START TIMER FOR ALGORITHM
+tic
+
+% RUNNING GRADIENT DESCENT
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
+iters = 1:iter-1;
+
+% MAP RUNTIME
+runtime = toc;
+%time_hist(i,:) = runtime;
+%end
+
+% START TIMER FOR PLOTTING
+tic
 
 figure()
 hold on
@@ -86,8 +85,8 @@ hold off
 figure()
 hold on
 count = 1;
-for i = 1:iter_num
-    if mod(i, floor(iter_num/25)) == 0
+for i = 1:iter
+    if mod(i, floor(iter/25)) == 0
         T_map = T_hist(:,:,i);
         subplot(5, 5, count)
         hold on
@@ -103,25 +102,30 @@ for i = 1:iter_num
 end
 hold off
 
+%{
 % PLOT TRAJECTORY OF EACH POINT
 figure()
 hold on
-for i = 1:iter_num
+for i = 1:iter
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
         plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
     end
 end
+%}
 
 % PLOTTING FINAL OPTIMAL MAP
-T_map = T_hist(:,:,iter_num+1);
+figure()
+hold on
+T_map = T_hist(:,:,iter);
 %scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 title('FINAL MAP')
 hold off
 
+%{
 % NEAREST NEIGHBOR SEARCH
 idk = knnsearch(y, T_map);
 new = y(idk,:);
@@ -145,7 +149,7 @@ subplot(1, 2, 2);
 scatter(new(:,1), new(:,2), 'filled', 'red');
 title('FINAL Y');
 hold off
-
+%}
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
@@ -285,14 +289,14 @@ function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, iter_num, H_const, lam_init, lam_final)
-
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, eta, iter_num, H_const, lam_init, lam_final)
+   
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = x; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
-    eta_hist = zeros(iter_num, 1);
-    L1_hist = zeros(iter_num, 1);
-    L2_hist = zeros(iter_num, 1);
-    L_hist = zeros(iter_num, 1);
+    eta_hist = 0;
+    L1_hist = 0;
+    L2_hist = 0;
+    L_hist = 0;
 
     % INITIAL VALUES
     z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
@@ -300,8 +304,19 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     Hz_init = bandwidth(z, length(z));  % BANDWIDTH FOR ALL POINTS
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
 
+    criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
+    i = 1;
+    
+    if length(x) == length(y)
+        check = 0;
+    else
+        check = 4e-4;
+    end
+
     % LOOP OVER ITERATIONS
-    for i = 1:iter_num
+    while criteria > check
+        disp(criteria);
+%    for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(i, 100) == 0
             fprintf("Iteration: %d\n", i)
@@ -313,11 +328,15 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
 
+        criteria = F(Tx, y, Tx, Hz_init, Hy);
+
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz_init, Hy);
+        L2_hist(i,:) = criteria;
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
+
+        i = i+1;
     end
 end
