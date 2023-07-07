@@ -10,22 +10,41 @@ H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
-time_hist = zeros(30,1);
-%for i = 1:30
-%disp(i)
+time_hist = zeros(20,1);
+iter_hist = zeros(20,1);
+L_final = zeros(20,1);
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,4,5);
-b = linspace(0,4,5);
-[A, B] = meshgrid(a, b);
+for i = 1:20
+    disp(i)
+    
+    % SYNTHETIC DATA IN THE SHAPE OF A GRID
+    a = linspace(0,4,i);
+    b = linspace(0,4,i);
+    [A, B] = meshgrid(a, b);
+    
+    x_old = [A(:) B(:)];
+    y = normrnd(7, 0.5, [i^2,2]);
+    
+    % PRECONDITIONING
+    x1 = (x_old).*std(y)./std(x_old);
+    x = x1 - mean(x1) + mean(y);
+    
+    
+    % START TIMER FOR ALGORITHM
+    tic
+    
+    % RUNNING GRADIENT DESCENT
+    [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
+    iters = 1:iter-1;
+    
+    % MAP RUNTIME
+    runtime = toc;
+    time_hist(i,:) = runtime;
+    iter_hist(i,:) = iter;
+    L_final(i,:) = L2_hist(iter-1);
+end
 
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [5^2,2]);
-
-% PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
-
+%{
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
@@ -41,19 +60,6 @@ scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 title('PRECONDITIONED')
 hold off
-
-
-% START TIMER FOR ALGORITHM
-tic
-
-% RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter] = grad_descent(x, y, eta_init, iter_num, H_const, lambda_init, lambda_final);
-iters = 1:iter-1;
-
-% MAP RUNTIME
-runtime = toc;
-%time_hist(i,:) = runtime;
-%end
 
 % START TIMER FOR PLOTTING
 tic
@@ -306,17 +312,12 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, et
 
     criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
     i = 1;
-    
-    if length(x) == length(y)
-        check = 0;
-    else
-        check = 4e-4;
-    end
-
+   
+    % CONTINUE UNTIL REACHING STOPPING CRITERIA
+    while criteria > 1e-3
+        %disp(criteria);
     % LOOP OVER ITERATIONS
-    while criteria > check
-        disp(criteria);
-%    for i = 1:iter_num
+    %for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(i, 100) == 0
             fprintf("Iteration: %d\n", i)
@@ -337,6 +338,9 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, et
         L2_hist(i,:) = criteria;
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
 
+        if i == 1500
+            break
+        end
         i = i+1;
     end
 end

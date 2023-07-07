@@ -2,8 +2,6 @@
 
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
-%x = normrnd(0, 0.5, [100,2]);
-%y = x * 2;
 
 % STARTING PARAMETERS
 eta_init = 0.1;
@@ -14,36 +12,42 @@ H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
 lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
-time_hist = zeros(30,1);
-%for i = 1:30
-%disp(i)
+time_hist = zeros(20,1);
+iter_hist = zeros(20,1);
+L_final = zeros(20,1);
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID 
-a = linspace(0,4,5);
-b = linspace(0,4,5);
-[A, B] = meshgrid(a, b);
+for i = 1:20
+disp(i)
 
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [5^2,2]);
-
-% PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
-x = x1 - mean(x1) + mean(y);
-
-% START TIMER FOR ALGORITHM
-tic
-
-% RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta_init, beta, iter_num, H_const, lambda_init, lambda_final);
-
-% MAP RUNTIME
-runtime = toc;
-%time_hist(i,:) = runtime;
-%end
+    % SYNTHETIC DATA IN THE SHAPE OF A GRID 
+    a = linspace(0,4,i);
+    b = linspace(0,4,i);
+    [A, B] = meshgrid(a, b);
+    
+    x_old = [A(:) B(:)];
+    y = normrnd(7, 0.5, [i^2,2]);
+    
+    % PRECONDITIONING
+    x1 = (x_old).*std(y)./std(x_old);
+    x = x1 - mean(x1) + mean(y);
+    
+    % START TIMER FOR ALGORITHM
+    tic
+    
+    % RUNNING GRADIENT DESCENT
+    [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter] = grad_descent(x, y, eta_init, beta, iter_num, H_const, lambda_init, lambda_final);
+    
+    % MAP RUNTIME
+    runtime = toc;
+    time_hist(i,:) = runtime;
+    iter_hist(i,:) = iter;
+    L_final(i,:) = L2_hist(iter-1);
+end
 
 % START TIMER FOR PLOTTING
 tic
 
+%{
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
@@ -265,7 +269,7 @@ function gradL = L_grad(x, y, Tx, Hx, Hy, lam)
 end
 
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
-function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr, beta)
+function [eta, Tx_next, m_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, m_curr, beta)
     eta = eta * 2;                                                        % INCREASE ETA FOR FASTER CONVERGENCE
     l_grad = L_grad(x, y, Tx_curr, Hx, Hy, lam);
     m_next = beta .* m_curr + (1-beta) .* l_grad;
@@ -287,14 +291,14 @@ function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, beta, iter_num, H_const, lam_init, lam_final)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, eta, beta, iter_num, H_const, lam_init, lam_final)
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = x; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
-    eta_hist = zeros(iter_num, 1);
-    L1_hist = zeros(iter_num, 1);
-    L2_hist = zeros(iter_num, 1);
-    L_hist = zeros(iter_num, 1);
+    eta_hist = 0;
+    L1_hist = 0;
+    L2_hist = 0;
+    L_hist = 0;
 
     % INITIAL VALUES
     z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
@@ -303,8 +307,14 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
     m = zeros(size(x));
 
+    criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
+    i = 1;
+
+    % CONTINUE UNTIL REACHING STOPPING CRITERIA
+    while criteria > 1e-3
+        %disp(criteria);
     % LOOP OVER ITERATIONS
-    for i = 1:iter_num
+    %for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(i, 100) == 0
             fprintf("Iteration: %d\n", i)
@@ -314,13 +324,20 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lam_init, lam_final);
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
-        [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, m, beta);
+        [eta, Tx, m] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, m, beta);
+
+        criteria = F(Tx, y, Tx, Hz_init, Hy);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz_init, Hy);
+        L2_hist(i,:) = criteria;
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
+
+        if i == 1500
+            break
+        end
+        i = i+1;
     end
 end

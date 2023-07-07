@@ -27,10 +27,10 @@ x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
 
 % STARTING PARAMETERS
 eta_init = 0.1;
-iter_num = 10;
+iter_num = 20;
 iters = 1:iter_num;
 H_const = 20;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
+lambda_init = 50000;    % INITIAL REGULARIZATION PARAMETER 
 lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 % START TIMER FOR ALGORITHM
@@ -318,9 +318,13 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
     Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
     Hz_init = bandwidth(z, length(z));  % BANDWIDTH FOR ALL POINTS
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
+   
+    criteria = 1e8;
+    i = 1;
 
     % LOOP OVER ITERATIONS
-    for i = 1:iter_num
+    while criteria > 5
+%    for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(i, 1) == 0
             fprintf("Iteration: %d\n", i)
@@ -335,11 +339,15 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, weights);
 
+        criteria = F(Tx, y, Tx, Hz_init, Hy, weights);
+
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx, weights);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz, weights);
+        L2_hist(i,:) = criteria;
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
+
+        i = i+1;
     end
 end

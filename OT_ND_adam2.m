@@ -308,7 +308,8 @@ end
 % LINEARLY INCREASING LAMBDA AND DECREASING BANDWIDTH (RETURNS DxD MATRIX)
 function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam_final)
     Hz_new = (H_const * Hz * (it - i) / it) + (Hy * i / it);
-    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it); 
+    %lam_new = (lam_init * (it - i) / it) + (lam_final * i / it); 
+    lam_new = lam_final;
 end
 
 % GRADIENT DESCENT
@@ -349,7 +350,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist] = grad_descent(x, y, eta, 
         T_hist(:,:,i+1) = Tx;
         eta_hist(i,:) = eta;
         L1_hist(i,:) = C(x, Tx, weights);
-        L2_hist(i,:) = F(Tx, y, Tx, Hz, Hz, weights);
+        L2_hist(i,:) = F(Tx, y, Tx, Hz_init, Hy, weights);
         L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
     end
 end
