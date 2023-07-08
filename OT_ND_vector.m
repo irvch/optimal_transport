@@ -5,9 +5,9 @@ rng('default');
 
 % STARTING PARAMETERS
 eta_init = 0.1;          % INITIAL STEP SIZE
-iter_num = 100;          % ARBITRARY NUMBER OF ITERATIONS FOR BANDWIDTH TO DECREASE UNTIL
-H_const = 1;             % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS (OBSOLETE WITH PRECONDITIONING)
-lambda = 50000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+iter_num = 400;          % ARBITRARY NUMBER OF ITERATIONS FOR BANDWIDTH TO DECREASE UNTIL
+H_const = 10;             % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS (OBSOLETE WITH PRECONDITIONING)
+lambda = 500000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 time_hist = zeros(20,1);
 iter_hist = zeros(20,1);
@@ -43,7 +43,7 @@ fprintf("Final cost: %d\n\n", L2_hist(min_index,:))
 runtime = toc;
 time_hist(i,:) = runtime;
 iter_hist(i,:) = iter;
-L_final(i,:) = L2_hist(iter-1);
+L_final(i,:) = L2_hist(iter);
 %end
 
 % PLOTTING INITIAL DISTRIBUTIONS
@@ -336,7 +336,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
 
         criteria = F(Tx, y, Tx, Hz_init, Hy);
-        if criteria < minimum
+        if abs(criteria) < abs(minimum)
             minimum = criteria;
             min_index = iter;
         end

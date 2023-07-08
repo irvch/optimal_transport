@@ -7,47 +7,45 @@ rng('default');
 eta_init = 0.1;
 beta1 = 0.9;
 beta2 = 0.9;
-iter_num = 500;
-iters = 1:iter_num;
+iter_num = 400;
 H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_init = 5000;    % INITIAL REGULARIZATION PARAMETER 
-lambda_final = 50000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+lambda_final = 500000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 time_hist = zeros(20,1);
 iter_hist = zeros(20,1);
 L_final = zeros(20,1);
 
-for i = 1:20
-    disp(i)
+%for i = 1:20
+%    disp(i)
 
-    % SYNTHETIC DATA IN THE SHAPE OF A GRID
-    a = linspace(0,4,i);
-    b = linspace(0,4,i);
-    [A, B] = meshgrid(a, b);
-    
-    x_old = [A(:) B(:)];
-    y = normrnd(7, 0.5, [i^2,2]);
-    
-    % PRECONDITIONING
-    x1 = (x_old).*std(y)./std(x_old);
-    x = x1 - mean(x1) + mean(y);
-    
-    % START TIMER FOR ALGORITHM
-    tic
-    
-    % RUNNING GRADIENT DESCENT
-    [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter] = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda_init, lambda_final, alpha);
-    
-    % MAP RUNTIME
-    runtime = toc;
-    time_hist(i,:) = runtime;
-    iter_hist(i,:) = iter;
-    L_final(i,:) = L2_hist(iter-1);
-end
+% SYNTHETIC DATA IN THE SHAPE OF A GRID
+a = linspace(0,4,5);
+b = linspace(0,4,5);
+[A, B] = meshgrid(a, b);
 
-%{
-% START TIMER FOR PLOTTING
+x_old = [A(:) B(:)];
+y = normrnd(7, 0.5, [25,2]);
+
+% PRECONDITIONING
+x1 = (x_old).*std(y)./std(x_old);
+x = x1 - mean(x1) + mean(y);
+
+% START TIMER FOR ALGORITHM
 tic
+
+% RUNNING GRADIENT DESCENT
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index]  = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda);
+iters = 1:iter;
+fprintf("\nTotal iters: %d\n", iter)
+fprintf("Minimum achieved at iter: %d\n", min_index)
+fprintf("Final cost: %d\n\n", L2_hist(min_index,:))
+
+% MAP RUNTIME
+runtime = toc;
+time_hist(i,:) = runtime;
+iter_hist(i,:) = iter;
+L_final(i,:) = L2_hist(iter);
+%end
 
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
@@ -64,6 +62,9 @@ scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 title('PRECONDITIONED')
 hold off
+
+% START TIMER FOR PLOTTING
+tic
 
 figure()
 hold on
@@ -88,17 +89,12 @@ plot(iters, eta_hist, '-')
 title('ETA')
 hold off
 
-% PLOT LAMBDA HISTORY
-figure()
-plot(iters, lam_hist, '-')
-title('LAMBDA')
-
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
 hold on
 count = 1;
-for i = 1:iter_num
-    if mod(i, floor(iter_num/25)) == 0
+for i = 1:min_index
+    if mod(i, floor(iter/25)) == 0
         T_map = T_hist(:,:,i);
         subplot(5, 5, count)
         hold on
@@ -114,25 +110,30 @@ for i = 1:iter_num
 end
 hold off
 
+%{
 % PLOT TRAJECTORY OF EACH POINT
 figure()
 hold on
-for i = 1:iter_num
+for i = 1:iter
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
         plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
     end
 end
+%}
 
 % PLOTTING FINAL OPTIMAL MAP
-T_map = T_hist(:,:,iter_num+1);
+figure()
+hold on
+T_map = T_hist(:,:,min_index);
 %scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
 title('FINAL MAP')
 hold off
 
+%{
 % NEAREST NEIGHBOR SEARCH
 idk = knnsearch(y, T_map);
 new = y(idk,:);
@@ -156,7 +157,7 @@ subplot(1, 2, 2);
 scatter(new(:,1), new(:,2), 'filled', 'red');
 title('FINAL Y');
 hold off
-
+%}
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
@@ -164,6 +165,7 @@ disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 %}
+
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
@@ -293,22 +295,16 @@ function [eta, Tx_next, m_next, v_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, 
 end
 
 % LINEARLY INCREASING LAMBDA AND DECREASING BANDWIDTH (RETURNS DxD MATRIX)
-function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lam_init, lam_final)
-    Hz_new = (H_const * Hz * (it - i) / it) + (Hy * i / it);
-    lam_new = lam_final;
-%    lam_new = (lam_init * (it - i) / it) + (lam_final * i / it);
+function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lambda)
+    if i < it
+        Hz = (H_const * Hz * (it - i) / it) + (Hy * i / it);
+    end
+    Hz_new = Hz;
+    lam_new = lambda;
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, eta, beta1, beta2, iter_num, H_const, lam_init, lam_final, alpha)
-
-    % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
-    T_hist = x; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
-    eta_hist = 0;
-    L1_hist = 0;
-    L2_hist = 0;
-    L_hist = 0;
-
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, beta1, beta2, iter_num, H_const, lambda)
     % INITIAL VALUES
     z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
     Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
@@ -317,38 +313,48 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, i] = grad_descent(x, y, et
     m = zeros(size(x));
     v = zeros(size(x));
 
+    % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
+    T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
+    eta_hist = eta;
+    L1_hist = C(x, Tx);
+    L2_hist = F(Tx, y, Tx, Hz_init, Hy);
+    L_hist = L1_hist + lambda * F(Tx, y, Tx, Hz_init, Hy);
+
     criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
-    i = 1;
+    minimum = 1e8;
+    iter = 1;
+    min_index = 1;
 
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
     while criteria > 1e-3
-        %disp(criteria);
-    % LOOP OVER ITERATIONS
-    %for i = 1:iter_num
         % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(i, 100) == 0
-            fprintf("Iteration: %d\n", i)
+        if mod(iter, 100) == 0
+            fprintf("Iteration: %d\n", iter)
         end
 
-        % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
-        [Hz, lam] = linear_change(Hy, Hz_init, i, iter_num, H_const, lam_init, lam_final);
-
-        % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
-        [eta, Tx, m, v] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, m, v, beta1, beta2, i);
-
-        criteria = F(Tx, y, Tx, Hz_init, Hy);
-
-        % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
-        T_hist(:,:,i+1) = Tx;
-        eta_hist(i,:) = eta;
-        L1_hist(i,:) = C(x, Tx);
-        L2_hist(i,:) = criteria; 
-        L_hist(i,:) = L1_hist(i,:) + lam*(L2_hist(i,:));
-
-        if i == 1500
+        if iter == 1500
             break
         end
-        i = i+1;
+        iter = iter+1;
+
+        % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
+        [Hz, lam] = linear_change(Hy, Hz_init, iter, iter_num, H_const, lambda);
+
+        % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
+        [eta, Tx, m, v] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, m, v, beta1, beta2, iter);
+
+        criteria = F(Tx, y, Tx, Hz_init, Hy);
+        if abs(criteria) < abs(minimum)
+            minimum = criteria;
+            min_index = iter;
+        end
+
+        % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
+        T_hist(:,:,iter) = Tx;
+        eta_hist(iter,:) = eta;
+        L1_hist(iter,:) = C(x, Tx);
+        L2_hist(iter,:) = criteria;
+        L_hist(iter,:) = L1_hist(iter,:) + lam*(L2_hist(iter,:));
     end
 end
 
