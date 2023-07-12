@@ -5,9 +5,9 @@ rng('default');
 
 % STARTING PARAMETERS
 eta_init = 0.1;          % INITIAL STEP SIZE
-iter_num = 400;          % ARBITRARY NUMBER OF ITERATIONS FOR BANDWIDTH TO DECREASE UNTIL
+iter_num = 2;          % ARBITRARY NUMBER OF ITERATIONS FOR BANDWIDTH TO DECREASE UNTIL
 H_const = 10;             % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS (OBSOLETE WITH PRECONDITIONING)
-lambda = 500000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lambda = 10000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 time_hist = zeros(20,1);
 iter_hist = zeros(20,1);
@@ -41,9 +41,9 @@ fprintf("Final cost: %d\n\n", L2_hist(min_index,:))
 
 % MAP RUNTIME
 runtime = toc;
-time_hist(i,:) = runtime;
-iter_hist(i,:) = iter;
-L_final(i,:) = L2_hist(iter);
+%time_hist(i,:) = runtime;
+%iter_hist(i,:) = iter;
+%L_final(i,:) = L2_hist(iter);
 %end
 
 % PLOTTING INITIAL DISTRIBUTIONS
@@ -301,8 +301,8 @@ end
 function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, iter_num, H_const, lambda)
     % INITIAL VALUES
     z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
-    Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
-    Hz_init = bandwidth(z, length(z));  % BANDWIDTH FOR ALL POINTS
+    Hy = bandwidth(y, length(x));       % BANDWIDTH FOR Y
+    Hz_init = bandwidth(z, length(x));  % BANDWIDTH FOR ALL POINTS
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
