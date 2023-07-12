@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 10000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 500000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -15,12 +15,12 @@ lam = 10000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT 
 %    disp(i)
     
 % SYNTHETIC DATA IN THE SHAPE OF A GRID
-a = linspace(0,4,10);
-b = linspace(0,4,10);
+a = linspace(0,4,5);
+b = linspace(0,4,5);
 [A, B] = meshgrid(a, b);
 
 x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [200,2]);
+y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
 x1 = (x_old).*std(y)./std(x_old);
@@ -309,7 +309,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
     while criteria > 0
         % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(iter, 10) == 0
+        if mod(iter, 100) == 0
             fprintf("Iteration: %d\n", iter)
         end
 

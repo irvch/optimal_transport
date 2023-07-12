@@ -4,12 +4,10 @@
 rng('default');
 
 % STARTING PARAMETERS
-eta_init = 0.1;
+eta = 0.1;
 beta1 = 0.9;
 beta2 = 0.9;
-iter_num = 400;
-H_const = 10;          % MULTIPLY BANDWIDTH BY THIS FACTOR TO REACH ALL POINTS
-lambda_final = 500000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+lam = 500000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
 
 time_hist = zeros(20,1);
 iter_hist = zeros(20,1);
@@ -34,7 +32,7 @@ x = x1 - mean(x1) + mean(y);
 tic
 
 % RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index]  = grad_descent(x, y, eta_init, beta1, beta2, iter_num, H_const, lambda);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index]  = grad_descent(x, y, eta, beta1, beta2, lam);
 iters = 1:iter;
 fprintf("\nTotal iters: %d\n", iter)
 fprintf("Minimum achieved at iter: %d\n", min_index)
@@ -304,12 +302,12 @@ function [Hz_new, lam_new] = linear_change(Hy, Hz, i, it, H_const, lambda)
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, beta1, beta2, iter_num, H_const, lambda)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, beta1, beta2, lam)
     % INITIAL VALUES
-    z = [x; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
-    Hy = bandwidth(y, length(z));       % BANDWIDTH FOR Y
-    Hz_init = bandwidth(z, length(z));  % BANDWIDTH FOR ALL POINTS
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
+    z = [Tx; y];                        % COMBINED SET OF POINTS - FOR BANDWIDTH
+    Hy = bandwidth(y, length(x));       % BANDWIDTH FOR Y
+    Hz = bandwidth(z, length(x));       % BANDWIDTH FOR ALL POINTS
     m = zeros(size(x));
     v = zeros(size(x));
 
@@ -317,8 +315,8 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
     eta_hist = eta;
     L1_hist = C(x, Tx);
-    L2_hist = F(Tx, y, Tx, Hz_init, Hy);
-    L_hist = L1_hist + lambda * F(Tx, y, Tx, Hz_init, Hy);
+    L2_hist = F(Tx, y, Tx, Hz, Hy);
+    L_hist = L1_hist + lam * F(Tx, y, Tx, Hz, Hy);
 
     criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
     minimum = 1e8;
@@ -326,7 +324,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
     min_index = 1;
 
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
-    while criteria > 1e-3
+    while criteria > 0
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(iter, 100) == 0
             fprintf("Iteration: %d\n", iter)
@@ -338,16 +336,14 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
         iter = iter+1;
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
-        [Hz, lam] = linear_change(Hy, Hz_init, iter, iter_num, H_const, lambda);
+        z = [Tx; y];
+        Hz = bandwidth(z, length(x));
+        Hz = (Hz + Hy) / 2;
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx, m, v] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, m, v, beta1, beta2, iter);
 
-        criteria = F(Tx, y, Tx, Hz_init, Hy);
-        if abs(criteria) < abs(minimum)
-            minimum = criteria;
-            min_index = iter;
-        end
+        criteria = F(Tx, y, Tx, Hz, Hy);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,iter) = Tx;
@@ -355,14 +351,12 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
         L1_hist(iter,:) = C(x, Tx);
         L2_hist(iter,:) = criteria;
         L_hist(iter,:) = L1_hist(iter,:) + lam*(L2_hist(iter,:));
+
+        if abs(criteria) < abs(minimum)
+            minimum = criteria;
+            min_index = iter;
+        else
+            break
+        end
     end
 end
-
-%{
-% ADAPTIVE LAMBDA - DOESN'T WORK
-function lambda = adapt_lambda(x, y, Tx, Hx, Hy, alpha)
-    top = alpha - (norm(C_grad(x, Tx) - F_grad(Tx, y, Tx, Hx, Hy), 'fro')^2);
-    bottom = norm(F_grad(Tx, y, Tx, Hx, Hy), 'fro')^2;
-    lambda = top / bottom;
-end
-%}
