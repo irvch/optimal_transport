@@ -16,10 +16,8 @@ rng('default');
 %[B1, B2] = meshgrid(b1, b2);
 %y = [B1(:) B2(:)];
 
-y = table2array(readtable('revised data edit.xlsx', Sheet='every'));
-%x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
-x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every (4)'));
+x = table2array(readtable('revised data 2.xlsx', Sheet='every (3)'));
+y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % PRECONDITIONING
 %x1 = (x_old).*std(y)./std(x_old);

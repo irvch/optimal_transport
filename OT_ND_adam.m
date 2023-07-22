@@ -7,7 +7,7 @@ rng('default');
 eta = 0.1;
 beta1 = 0.9;
 beta2 = 0.9;
-lam = 500000;  % FINAL REGULARIZATION PARAMETER (SHOULD ALWAYS INCREASE)
+lam = 1e8;
 
 time_hist = zeros(20,1);
 iter_hist = zeros(20,1);
@@ -28,6 +28,9 @@ y = normrnd(7, 0.5, [25,2]);
 x1 = (x_old).*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
 
+x = table2array(readtable('revised data 2.xlsx', Sheet='every (3)'));
+y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+
 % START TIMER FOR ALGORITHM
 tic
 
@@ -45,19 +48,21 @@ iter_hist(i,:) = iter;
 L_final(i,:) = L2_hist(iter);
 %end
 
+%{
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
-scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
+scatter3(x_old(:,1), x_old(:,2), x_old(:,3), 'filled', 'blue')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
 title('INITIAL')
 hold off
+%}
 
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()
 hold on
-scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
+scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
 title('PRECONDITIONED')
 hold off
 
@@ -126,8 +131,8 @@ figure()
 hold on
 T_map = T_hist(:,:,min_index);
 %scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
 

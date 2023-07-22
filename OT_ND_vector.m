@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 500000;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 1e8;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -26,6 +26,9 @@ y = normrnd(7, 0.5, [25,2]);
 x1 = (x_old).*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
 
+x = table2array(readtable('revised data 2.xlsx', Sheet='every (3)'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='every (2)'));
+y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % START TIMER FOR ALGORITHM
 tic
@@ -47,11 +50,17 @@ runtime = toc;
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
-scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-title('INITIAL')
+scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+title('SOURCE')
 hold off
+%hold off
+%figure()
+%hold on
+%title('TARGET')
 
+
+%{
 % PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
 figure()
 hold on
@@ -59,6 +68,7 @@ scatter(x(:,1), x(:,2), 'filled', 'blue')
 scatter(y(:,1), y(:,2), 'filled', 'red')
 title('PRECONDITIONED')
 hold off
+%}
 
 % START TIMER FOR PLOTTING
 tic
@@ -95,8 +105,8 @@ for i = 1:min_index
         T_map = T_hist(:,:,i);
         subplot(5, 5, count)
         hold on
-        scatter(y(:,1), y(:,2), 'filled', 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+        scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+        scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
         iterations = sprintf('ITERS: %d', i);
         title(iterations)
         hold off
@@ -107,26 +117,25 @@ for i = 1:min_index
 end
 hold off
 
-%{
+
 % PLOT TRAJECTORY OF EACH POINT
 figure()
 hold on
-for i = 1:iter
+for i = 1:min_index
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
         plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
     end
 end
-%}
 
 % PLOTTING FINAL OPTIMAL MAP
-figure()
-hold on
+%figure()
+%hold on
 T_map = T_hist(:,:,min_index);
 %scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter(y(:,1), y(:,2), 'filled', 'red')
-scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green')
 title('FINAL MAP')
 hold off
 
@@ -289,10 +298,10 @@ end
 % GRADIENT DESCENT
 function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
-    Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
+    Tx = x;                              % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
     z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
-    Hy = bandwidth(y, length(x));       % BANDWIDTH FOR Y
-    Hz = bandwidth(z, length(x));  % BANDWIDTH FOR ALL POINTS
+    Hy = bandwidth(y, length(x));        % BANDWIDTH FOR Y
+    Hz = bandwidth(z, length(x));        % BANDWIDTH FOR ALL POINTS
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
