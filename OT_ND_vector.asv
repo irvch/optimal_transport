@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 1e8;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 1e2;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -15,8 +15,8 @@ lam = 1e8;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
     
 % SLOPE DATA SETS
 %x_old = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
-x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
-y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+%y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
 % PYRAMID DATA SETS
 %x = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
@@ -26,7 +26,6 @@ y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 %x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
 %y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
-%{
 a = linspace(0,4,5);
 b = linspace(0,4,5);
 [A, B] = meshgrid(a, b);
@@ -37,7 +36,6 @@ y = normrnd(7, 0.5, [25,2]);
 % PRECONDITIONING
 x1 = x_old.*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
-%}
 
 %{
 x_coord_x = x(:,1);
@@ -69,7 +67,7 @@ x = [x_x, x_y, x_old(:,3)];
 tic
 
 % RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, lam_hist, iter, min_index] = grad_descent(x, y, eta, lam);
 iters = 1:iter;
 fprintf("\nTotal iters: %d\n", iter)
 fprintf("Minimum achieved at iter: %d\n", min_index)
@@ -125,60 +123,57 @@ plot(iters, eta_hist, '-')
 title('ETA')
 hold off
 
+figure()
+hold on
+plot(iters, lam_hist, '-')
+title('LAM')
+hold off
+
+%{
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
 hold on
 count = 1;
-n = round(sqrt(min_index));
 for i = 1:min_index
-    if mod(i, floor(iter/n)) == 0
+    if mod(i, floor(min_index/25)) == 0
         T_map = T_hist(:,:,i);
-        subplot(n, n, count)
+        subplot(5, 5, count)
         hold on
-        if d == 2
-            scatter(y(:,1), y(:,2), 'filled', 'red')
-            scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
-        elseif d == 3
-            scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-            scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
-        end
+        scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+        scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
         iterations = sprintf('ITERS: %d', i);
         title(iterations)
         hold off
-        if count < 16
+        if count < 25
             count = count + 1;
         end
     end
 end
 hold off
+%}
 
 % PLOTTING FINAL OPTIMAL MAP
 figure()
 hold on
 T_map = T_hist(:,:,min_index);
+
 if d == 2
-    %scatter(x(:,1), x(:,2), 'filled', 'blue')
-    p_y = scatter(y(:,1), y(:,2), 'filled', 'red');
-    p_t = scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
-elseif d == 3
-    p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
-    p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
-end
- 
-%{
+p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
+p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
+
+%scatter(x(:,1), x(:,2), 'filled', 'blue')
+%scatter(y(:,1), y(:,2), 'filled', 'red')
+%scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+
 % PLOT TRAJECTORY OF EACH POINT
 for i = 1:min_index
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
-        if d == 2
-            line = plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green');
-        elseif d == 3
-            line = plot3([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], [T_map_i1(j,3) T_map_i2(j,3)], color = 'green');
-        end
+        %plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
+        line = plot3([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], [T_map_i1(j,3) T_map_i2(j,3)], color = 'green');
     end
 end
-%}
 
 title('FINAL MAP')
 legend([p_y, p_t], {'TARGET', 'MAP'})
@@ -344,19 +339,17 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, lam_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
     Tx = x;                              % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
     z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
     Hy = bandwidth(y, length(x));        % BANDWIDTH FOR Y
     Hz = bandwidth(z, length(x));        % BANDWIDTH FOR ALL POINTS
-
-    disp(Hy)
     
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
-    H_hist = Hz;
     eta_hist = eta;
+    lam_hist = lam;
     L1_hist = C(x, Tx);
     L2_hist = F(Tx, y, Tx, Hz, Hy);
     L_hist = L1_hist + lam * F(Tx, y, Tx, Hz, Hy);
@@ -373,24 +366,29 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             fprintf("Iteration: %d\n", iter)
         end
 
-        if iter == 200
+        if iter == 1500
             break
         end
         iter = iter+1;
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
         z = [Tx; y];
-        Hz_old = bandwidth(z, length(x));
-        Hz = (Hz_old + Hy) / 2;
+        Hz = bandwidth(z, length(x));
+        Hz = (Hz + Hy) / 2;
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
+
+        cost = C(x, Tx);
         criteria = F(Tx, y, Tx, Hz, Hy);
+        disp(cost)
+        disp(criteria)
+        lam = 10^(round(log10(cost/criteria)));
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,iter) = Tx;
-        H_hist(:,:,iter) = Hz;
         eta_hist(iter,:) = eta;
+        lam_hist(iter,:) = lam;
         L1_hist(iter,:) = C(x, Tx);
         L2_hist(iter,:) = criteria;
         L_hist(iter,:) = L1_hist(iter,:) + lam*(L2_hist(iter,:));
@@ -399,7 +397,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             minimum = criteria;
             min_index = iter;
         else
-            %break
+            break
         end
     end
 end
