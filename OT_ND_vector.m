@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 1e8;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 1e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -15,18 +15,17 @@ lam = 1e8;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
     
 % SLOPE DATA SETS
 %x_old = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
-x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
-y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+%y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
 % PYRAMID DATA SETS
-%x = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%x_old = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 %y = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
 %x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
 %y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
-%{
 a = linspace(0,4,5);
 b = linspace(0,4,5);
 [A, B] = meshgrid(a, b);
@@ -37,7 +36,6 @@ y = normrnd(7, 0.5, [25,2]);
 % PRECONDITIONING
 x1 = x_old.*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
-%}
 
 %{
 x_coord_x = x(:,1);
@@ -88,6 +86,20 @@ runtime = toc;
 figure()
 hold on
 if d == 2
+    scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
+    scatter(y(:,1), y(:,2), 'filled', 'red')
+elseif d == 3
+    scatter3(x_old(:,1), x_old(:,2), x_old(:,3), 'filled', 'blue')
+    scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+end
+title('INITIAL DISTRIBUTIONS')
+legend('SOURCE', 'TARGET')
+hold off
+
+% PLOTTING PRECONDITIONED DISTRIBUTIONS
+figure()
+hold on
+if d == 2
     scatter(x(:,1), x(:,2), 'filled', 'blue')
     scatter(y(:,1), y(:,2), 'filled', 'red')
 elseif d == 3
@@ -97,7 +109,6 @@ end
 title('DISTRIBUTIONS')
 legend('SOURCE', 'TARGET')
 hold off
-
 
 % START TIMER FOR PLOTTING
 tic
@@ -125,15 +136,15 @@ plot(iters, eta_hist, '-')
 title('ETA')
 hold off
 
+%{
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
 hold on
 count = 1;
-n = round(sqrt(min_index));
 for i = 1:min_index
-    if mod(i, floor(iter/n)) == 0
+    %if mod(i, floor(min_index/4)) == 0
         T_map = T_hist(:,:,i);
-        subplot(n, n, count)
+        subplot(5, 5, i)
         hold on
         if d == 2
             scatter(y(:,1), y(:,2), 'filled', 'red')
@@ -145,12 +156,13 @@ for i = 1:min_index
         iterations = sprintf('ITERS: %d', i);
         title(iterations)
         hold off
-        if count < 16
+        if count < 25
             count = count + 1;
         end
-    end
+    %end
 end
 hold off
+%}
 
 % PLOTTING FINAL OPTIMAL MAP
 figure()
@@ -164,10 +176,10 @@ elseif d == 3
     p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
     p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 end
- 
+
 %{
 % PLOT TRAJECTORY OF EACH POINT
-for i = 1:min_index
+for i = 1:min_index-1
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
     for j = 1:length(x)
@@ -373,12 +385,15 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             fprintf("Iteration: %d\n", iter)
         end
 
-        if iter == 200
+        if iter == 500
             break
         end
         iter = iter+1;
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
+        x1 = Tx.*std(y)./std(Tx);
+        Tx = x1 - mean(x1) + mean(y);
+
         z = [Tx; y];
         Hz_old = bandwidth(z, length(x));
         Hz = (Hz_old + Hy) / 2;
@@ -399,7 +414,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             minimum = criteria;
             min_index = iter;
         else
-            %break
+            break
         end
     end
 end

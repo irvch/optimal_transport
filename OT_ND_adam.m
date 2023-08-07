@@ -9,14 +9,26 @@ beta1 = 0.9;
 beta2 = 0.9;
 lam = 1e8;
 
-time_hist = zeros(20,1);
-iter_hist = zeros(20,1);
-L_final = zeros(20,1);
-
+%time_hist = zeros(40,1);
+%iter_hist = zeros(40,1);
+%L_final = zeros(20,1);
 %for i = 1:20
 %    disp(i)
+    
+% SLOPE DATA SETS
+%x_old = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
-% SYNTHETIC DATA IN THE SHAPE OF A GRID
+% PYRAMID DATA SETS
+%x = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%y = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
+
+% PYRAMID DATA WITH SHIFTED SOURCE
+%x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+
+%{
 a = linspace(0,4,5);
 b = linspace(0,4,5);
 [A, B] = meshgrid(a, b);
@@ -25,17 +37,41 @@ x_old = [A(:) B(:)];
 y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
-x1 = (x_old).*std(y)./std(x_old);
+x1 = x_old.*std(y)./std(x_old);
 x = x1 - mean(x1) + mean(y);
+%}
 
-x = table2array(readtable('revised data 2.xlsx', Sheet='every (3)'));
-y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%{
+x_coord_x = x(:,1);
+x_coord_y = x(:,2);
+y_coord_x = y(:,1);
+y_coord_y = y(:,2);
+
+disp([std(x_old(:,1)), std(x(:,1)), std(y(:,1))])
+disp([std(x_old(:,2)), std(x(:,2)), std(y(:,2))])
+disp([std(x_old(:,3)), std(x(:,3)), std(y(:,3))])
+
+%x = x_old;
+%}
+
+%{
+% PRECONDITIONING X COORDS
+x1 = (x_coord_x).*std(y_coord_x)./std(x_coord_x);
+x_x = x1 - mean(x1) + mean(y_coord_x);
+
+% PRECONDITIONING Y COORDS
+x2 = (x_coord_y).*std(y_coord_y)./std(x_coord_y);
+x_y = x2 - mean(x2) + mean(y_coord_y);
+
+x = [x_x, x_y, x_old(:,3)];
+%}
+
 
 % START TIMER FOR ALGORITHM
 tic
 
 % RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index]  = grad_descent(x, y, eta, beta1, beta2, lam);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, beta1, beta2, lam);
 iters = 1:iter;
 fprintf("\nTotal iters: %d\n", iter)
 fprintf("Minimum achieved at iter: %d\n", min_index)
@@ -43,28 +79,27 @@ fprintf("Final cost: %d\n\n", L2_hist(min_index,:))
 
 % MAP RUNTIME
 runtime = toc;
-time_hist(i,:) = runtime;
-iter_hist(i,:) = iter;
-L_final(i,:) = L2_hist(iter);
+%time_hist(i,:) = runtime;
+%iter_hist(i,:) = iter;
+%L_final(i,:) = L2_hist(iter);
 %end
 
-%{
+[~, d] = size(x);
+
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
-scatter3(x_old(:,1), x_old(:,2), x_old(:,3), 'filled', 'blue')
-scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-title('INITIAL')
+if d == 2
+    scatter(x(:,1), x(:,2), 'filled', 'blue')
+    scatter(y(:,1), y(:,2), 'filled', 'red')
+elseif d == 3
+    scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+    scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+end
+title('DISTRIBUTIONS')
+legend('SOURCE', 'TARGET')
 hold off
-%}
 
-% PLOTTING DISTRIBUTIONS AFTER PRECONDITIONING
-figure()
-hold on
-scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
-scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-title('PRECONDITIONED')
-hold off
 
 % START TIMER FOR PLOTTING
 tic
@@ -96,45 +131,61 @@ hold off
 figure()
 hold on
 count = 1;
+n = round(sqrt(min_index));
 for i = 1:min_index
-    if mod(i, floor(iter/25)) == 0
+    if mod(i, floor(min_index/n)) == 0
         T_map = T_hist(:,:,i);
-        subplot(5, 5, count)
+        subplot(n, n, count)
         hold on
-        scatter(y(:,1), y(:,2), 'filled', 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+        if d == 2
+            scatter(y(:,1), y(:,2), 'filled', 'red')
+            scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+        elseif d == 3
+            scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+            scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
+        end
         iterations = sprintf('ITERS: %d', i);
         title(iterations)
         hold off
-        if count < 25
+        if count < 16
             count = count + 1;
         end
     end
 end
 hold off
 
-%{
-% PLOT TRAJECTORY OF EACH POINT
-figure()
-hold on
-for i = 1:iter
-    T_map_i1 = T_hist(:,:,i);
-    T_map_i2 = T_hist(:,:,i+1);
-    for j = 1:length(x)
-        plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
-    end
-end
-%}
-
 % PLOTTING FINAL OPTIMAL MAP
 figure()
 hold on
 T_map = T_hist(:,:,min_index);
-%scatter(x(:,1), x(:,2), 'filled', 'blue')
-scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
+if d == 2
+    %scatter(x(:,1), x(:,2), 'filled', 'blue')
+    p_y = scatter(y(:,1), y(:,2), 'filled', 'red');
+    p_t = scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
+elseif d == 3
+    p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
+    p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
+end
+ 
+%{
+% PLOT TRAJECTORY OF EACH POINT
+for i = 1:min_index
+    T_map_i1 = T_hist(:,:,i);
+    T_map_i2 = T_hist(:,:,i+1);
+    for j = 1:length(x)
+        if d == 2
+            line = plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green');
+        elseif d == 3
+            line = plot3([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], [T_map_i1(j,3) T_map_i2(j,3)], color = 'green');
+        end
+    end
+end
+%}
+
 title('FINAL MAP')
+legend([p_y, p_t], {'TARGET', 'MAP'})
 hold off
+
 
 %{
 % NEAREST NEIGHBOR SEARCH
@@ -162,13 +213,13 @@ title('FINAL Y');
 hold off
 %}
 
+
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 %}
-
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
@@ -177,7 +228,8 @@ function H = bandwidth(x, n)
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
     else      % FOR MULTIDIMENSIONAL CASE
-        H = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        %H = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     end
 end
 
@@ -205,12 +257,12 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
         % PART F1 WHERE CENTER POINTS ARE IN Tx
-        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
-        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
 
         % PART F2 WHERE CENTER POINTS ARE IN Y
-        func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx;
-        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy;
+        func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx(:,i);
+        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy(:,i);
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -220,13 +272,13 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
     f4 = sum(exp(-1/2.*sum(func4.^2, 1)), 'all');
     
     % CONSTANTS IN FRONT OF SUM
-    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
-    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d);
-    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d);
-    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d);
+    const1 = mean(diag(inv(diag(n^2 * (Hx*sqrt(2*pi)).^d))));
+    const2 = mean(diag(inv(diag(m*n * (Hy*sqrt(2*pi)).^d))));
+    const3 = mean(diag(inv(diag(n*m * (Hx*sqrt(2*pi)).^d))));
+    const4 = mean(diag(inv(diag(m^2 * (Hy*sqrt(2*pi)).^d))));
     
     % FINAL RESULT MULTIPLYING CONSTANTS
-    test = const1.*(f1)' - const2.*(f2)' - const3.*(f3)' + const4.*(f4)';
+    test = const1.*(f1) - const2.*(f2) - const3.*(f3) + const4.*(f4);
 end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
@@ -258,8 +310,8 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
 
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
-        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
-        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -267,8 +319,8 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     f2 = sum(func2.*exp(-1/2.*sum(func2.^2, 1)), 3);
 
     % CONSTANTS IN FRONT OF SUM
-    c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx);
-    c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy);
+    c1 = inv(diag(n^2 * (Hx*sqrt(2*pi)).^d * Hx'));
+    c2 = inv(diag(m*n * (Hy*sqrt(2*pi)).^d * Hy'));
     
     % FINAL GRADIENT VALUE
     gradF = c1.*(f1)' - c2.*(f2)';
