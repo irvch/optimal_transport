@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 1e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 5e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -19,19 +19,19 @@ lam = 1e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
 %y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
 % PYRAMID DATA SETS
-%x_old = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
-%y = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
-%x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+x_old = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
+y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
-a = linspace(0,4,5);
-b = linspace(0,4,5);
-[A, B] = meshgrid(a, b);
-
-x_old = [A(:) B(:)];
-y = normrnd(7, 0.5, [25,2]);
+% 2D DATA POINTS
+%a = linspace(0,4,5);
+%b = linspace(0,4,5);
+%[A, B] = meshgrid(a, b);
+%x_old = [A(:) B(:)];
+%y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
 x1 = x_old.*std(y)./std(x_old);
@@ -46,8 +46,6 @@ y_coord_y = y(:,2);
 disp([std(x_old(:,1)), std(x(:,1)), std(y(:,1))])
 disp([std(x_old(:,2)), std(x(:,2)), std(y(:,2))])
 disp([std(x_old(:,3)), std(x(:,3)), std(y(:,3))])
-
-%x = x_old;
 %}
 
 %{
@@ -67,7 +65,7 @@ x = [x_x, x_y, x_old(:,3)];
 tic
 
 % RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam);
 iters = 1:iter;
 fprintf("\nTotal iters: %d\n", iter)
 fprintf("Minimum achieved at iter: %d\n", min_index)
@@ -86,16 +84,17 @@ runtime = toc;
 figure()
 hold on
 if d == 2
-    scatter(x_old(:,1), x_old(:,2), 'filled', 'blue')
+    scatter(x(:,1), x(:,2), 'filled', 'blue')
     scatter(y(:,1), y(:,2), 'filled', 'red')
 elseif d == 3
-    scatter3(x_old(:,1), x_old(:,2), x_old(:,3), 'filled', 'blue')
     scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+    scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
 end
 title('INITIAL DISTRIBUTIONS')
 legend('SOURCE', 'TARGET')
 hold off
 
+%{
 % PLOTTING PRECONDITIONED DISTRIBUTIONS
 figure()
 hold on
@@ -109,6 +108,7 @@ end
 title('DISTRIBUTIONS')
 legend('SOURCE', 'TARGET')
 hold off
+%}
 
 % START TIMER FOR PLOTTING
 tic
@@ -140,29 +140,24 @@ hold off
 % PLOT 25 MAP LOCATION HISTORIES
 figure()
 hold on
-count = 1;
 for i = 1:min_index
-    %if mod(i, floor(min_index/4)) == 0
-        T_map = T_hist(:,:,i);
-        subplot(5, 5, i)
-        hold on
-        if d == 2
-            scatter(y(:,1), y(:,2), 'filled', 'red')
-            scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
-        elseif d == 3
-            scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-            scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
-        end
-        iterations = sprintf('ITERS: %d', i);
-        title(iterations)
-        hold off
-        if count < 25
-            count = count + 1;
-        end
-    %end
+    T_map = T_hist(:,:,i);
+    subplot(5, 4, i)
+    hold on
+    if d == 2
+        scatter(y(:,1), y(:,2), 'filled', 'red')
+        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
+    elseif d == 3
+        scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+        scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
+    end
+    iterations = sprintf('ITERS: %d', i);
+    title(iterations)
+    hold off
 end
 hold off
 %}
+
 
 % PLOTTING FINAL OPTIMAL MAP
 figure()
@@ -233,13 +228,18 @@ disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
-function H = bandwidth(x, n)
-    [~, d] = size(x);                               
+function H = bandwidth(x, n)                   
+    [~, d] = size(x);
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
-    else      % FOR MULTIDIMENSIONAL CASE
-        %H = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-        H = std(x)*(4/((d+2)*n))^(1/(d+4));
+    elseif d == 2     % FOR MULTIDIMENSIONAL CASE
+        H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        H = [H1, H1];
+        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
+    elseif d == 3
+        H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        H = [H1, H1, H1];
+        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
     end
 end
 
@@ -267,12 +267,16 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
         % PART F1 WHERE CENTER POINTS ARE IN Tx
+        %func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
+        %func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
         func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
         func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
 
         % PART F2 WHERE CENTER POINTS ARE IN Y
+        %func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx;
+        %func4(i,:,:) = (y(:,i)' - y(:,i))./Hy;
         func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx(:,i);
-        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy(:,i);
+        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy(:,i);        
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -282,13 +286,18 @@ function test = F(Tx1, y, Tx2, Hx, Hy)
     f4 = sum(exp(-1/2.*sum(func4.^2, 1)), 'all');
     
     % CONSTANTS IN FRONT OF SUM
-    const1 = mean(diag(inv(diag(n^2 * (Hx*sqrt(2*pi)).^d))));
-    const2 = mean(diag(inv(diag(m*n * (Hy*sqrt(2*pi)).^d))));
-    const3 = mean(diag(inv(diag(n*m * (Hx*sqrt(2*pi)).^d))));
-    const4 = mean(diag(inv(diag(m^2 * (Hy*sqrt(2*pi)).^d))));
+    %const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
+    %const2 = 1/(m*n * (Hy*sqrt(2*pi))^d);
+    %const3 = 1/(n*m * (Hx*sqrt(2*pi))^d);
+    %const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d);
+
+    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d);
+    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d);
+    const3 = 1/(n*m * (mean(Hx)*sqrt(2*pi)).^d);
+    const4 = 1/(m^2 * (mean(Hy)*sqrt(2*pi)).^d);
     
     % FINAL RESULT MULTIPLYING CONSTANTS
-    test = const1.*(f1) - const2.*(f2) - const3.*(f3) + const4.*(f4);
+    test = const1.*f1 - const2.*f2 - const3.*f3 + const4.*f4;
 end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
@@ -320,6 +329,8 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
 
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
+        %func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
+        %func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
         func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
         func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
     end
@@ -329,8 +340,10 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy)
     f2 = sum(func2.*exp(-1/2.*sum(func2.^2, 1)), 3);
 
     % CONSTANTS IN FRONT OF SUM
-    c1 = inv(diag(n^2 * (Hx*sqrt(2*pi)).^d * Hx'));
-    c2 = inv(diag(m*n * (Hy*sqrt(2*pi)).^d * Hy'));
+    %c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx);
+    %c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy);
+    c1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * mean(Hx));
+    c2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * mean(Hy));
     
     % FINAL GRADIENT VALUE
     gradF = c1.*(f1)' - c2.*(f2)';
@@ -356,18 +369,15 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
     Tx = x;                              % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
     z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
     Hy = bandwidth(y, length(x));        % BANDWIDTH FOR Y
     Hz = bandwidth(z, length(x));        % BANDWIDTH FOR ALL POINTS
 
-    disp(Hy)
-    
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
-    H_hist = Hz;
     eta_hist = eta;
     L1_hist = C(x, Tx);
     L2_hist = F(Tx, y, Tx, Hz, Hy);
@@ -385,26 +395,23 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             fprintf("Iteration: %d\n", iter)
         end
 
-        if iter == 500
+        if iter == 100
             break
         end
         iter = iter+1;
 
         % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
-        x1 = Tx.*std(y)./std(Tx);
-        Tx = x1 - mean(x1) + mean(y);
-
         z = [Tx; y];
-        Hz_old = bandwidth(z, length(x));
-        Hz = (Hz_old + Hy) / 2;
+        Hz = bandwidth(z, length(x));
+        Hz = (Hz + Hy) / 2;
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
+
         criteria = F(Tx, y, Tx, Hz, Hy);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,iter) = Tx;
-        H_hist(:,:,iter) = Hz;
         eta_hist(iter,:) = eta;
         L1_hist(iter,:) = C(x, Tx);
         L2_hist(iter,:) = criteria;
