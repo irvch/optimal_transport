@@ -23,19 +23,39 @@ lam = 5e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
 %x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
-x_old = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
+x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
 y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % 2D DATA POINTS
-%a = linspace(0,4,5);
-%b = linspace(0,4,5);
+%a = linspace(0,4,25);
+%b = linspace(0,4,25);
 %[A, B] = meshgrid(a, b);
-%x_old = [A(:) B(:)];
-%y = normrnd(7, 0.5, [25,2]);
+%x = [A(:) B(:)];
+%y = normrnd(7, 0.5, [241,2]);
+
+% MATCH THE DIMENSIONS
+[n, d_x] = size(x);
+[m, d_y] = size(y);
+dim_diff = abs(d_x - d_y);
+
+if d_x > d_y
+    newrow_y = zeros(m, dim_diff);
+    y = [y, newrow_y];
+elseif d_x < d_y
+    newrow_x = zeros(n, dim_diff);
+    x = [x, newrow_x];
+end
 
 % PRECONDITIONING
-x1 = x_old.*std(y)./std(x_old);
+x1 = x.*std(y)./std(x);
 x = x1 - mean(x1) + mean(y);
+
+if d_x > d_y
+    y = [y(:,1), y(:,2), ones(m, dim_diff)*mean(y(:,3))];
+elseif d_x < d_y
+    x = [x(:,1), x(:,2), ones(n, dim_diff)*mean(y(:,3))];
+end
+
 
 %{
 x_coord_x = x(:,1);
@@ -65,11 +85,11 @@ x = [x_x, x_y, x_old(:,3)];
 tic
 
 % RUNNING GRADIENT DESCENT
-[T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam);
+[T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam);
 iters = 1:iter;
 fprintf("\nTotal iters: %d\n", iter)
 fprintf("Minimum achieved at iter: %d\n", min_index)
-fprintf("Final cost: %d\n\n", L2_hist(min_index,:))
+fprintf("Final cost: %d\n\n", L_hist(min_index,:))
 
 % MAP RUNTIME
 runtime = toc;
@@ -78,15 +98,13 @@ runtime = toc;
 %L_final(i,:) = L2_hist(iter);
 %end
 
-[~, d] = size(x);
-
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
-if d == 2
+if d_x == 2 && d_y == 2
     scatter(x(:,1), x(:,2), 'filled', 'blue')
     scatter(y(:,1), y(:,2), 'filled', 'red')
-elseif d == 3
+elseif d_x == 3 || d_y == 3
     scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
     scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
 end
@@ -163,14 +181,18 @@ hold off
 figure()
 hold on
 T_map = T_hist(:,:,min_index);
-if d == 2
+if d_x == 2 && d_y == 2
     %scatter(x(:,1), x(:,2), 'filled', 'blue')
     p_y = scatter(y(:,1), y(:,2), 'filled', 'red');
     p_t = scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
-elseif d == 3
+elseif d_x == 3 || d_y == 3
     p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
     p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 end
+
+T_map = T_hist(:,:,min_index);
+figure()
+scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 
 %{
 % PLOT TRAJECTORY OF EACH POINT
@@ -369,7 +391,7 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
 end
 
 % GRADIENT DESCENT
-function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam)
+function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
     Tx = x;                              % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
     z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
@@ -378,6 +400,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
+    H_hist = Hz;
     eta_hist = eta;
     L1_hist = C(x, Tx);
     L2_hist = F(Tx, y, Tx, Hz, Hy);
@@ -408,20 +431,22 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta);
 
-        criteria = F(Tx, y, Tx, Hz, Hy);
-
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,iter) = Tx;
+        H_hist(:,:,iter) = Hz;
         eta_hist(iter,:) = eta;
         L1_hist(iter,:) = C(x, Tx);
-        L2_hist(iter,:) = criteria;
+        L2_hist(iter,:) = F(Tx, y, Tx, Hz, Hy);
         L_hist(iter,:) = L1_hist(iter,:) + lam*(L2_hist(iter,:));
+
+        % DEFINING CRITERIA TO CONTINUE OR STOP ITERATION
+        criteria = L_hist(iter,:);
 
         if abs(criteria) < abs(minimum)
             minimum = criteria;
             min_index = iter;
         else
-            break
+            %break
         end
     end
 end

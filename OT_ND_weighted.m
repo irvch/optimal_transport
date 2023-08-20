@@ -3,29 +3,39 @@
 % RANDOMLY GENERATED 2D POINTS
 rng('default');
 
-% GRID SHAPED SOURCE POINTS
-%a1 = linspace(-5,0,4);
-%a2 = linspace(-5,0,4);
-%[A1, A2] = meshgrid(a1, a2);
-%x_old = [A1(:) A2(:)];
-%x = [A1(:) A2(:)];
+% STARTING PARAMETERS
+eta = 0.1;          % INITIAL STEP SIZE
+lam = 6e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
 
-% GRID SHAPED TARGET POINTS
-%b1 = linspace(1,9,4);
-%b2 = linspace(1,9,4);
-%[B1, B2] = meshgrid(b1, b2);
-%y = [B1(:) B2(:)];
+%time_hist = zeros(40,1);
+%iter_hist = zeros(40,1);
+%L_final = zeros(20,1);
+%for i = 1:20
+%    disp(i)
+    
+% SLOPE DATA SETS
+%x_old = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='slope'));
+%y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
-x = table2array(readtable('revised data 2.xlsx', Sheet='every (3)'));
-y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+% PYRAMID DATA SETS
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
+
+% PYRAMID DATA WITH SHIFTED SOURCE
+x = table2array(readtable('revised data 3.xlsx', Sheet='every (2)'));
+y = table2array(readtable('revised data 3.xlsx', Sheet='every'));
+
+% 2D DATA POINTS
+%a = linspace(0,4,5);
+%b = linspace(0,4,5);
+%[A, B] = meshgrid(a, b);
+%x = [A(:) B(:)];
+%y = normrnd(7, 0.5, [25,2]);
 
 % PRECONDITIONING
-%x1 = (x_old).*std(y)./std(x_old);
+%x1 = x_old.*std(y)./std(x_old);
 %x = x1 - mean(x1) + mean(y);
-
-% STARTING PARAMETERS
-eta = 0.1;
-lam = 1e8;
 
 % START TIMER FOR ALGORITHM
 tic
@@ -162,9 +172,9 @@ disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 function H = bandwidth(x, n)
     [~, d] = size(x);                               
     if d == 1 % FOR ONE-DIMENSIONAL CASE
-        H = 0.9*min(std2(x), iqr(x)/1.34)*n^(-1/5);
+        H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
     else      % FOR MULTIDIMENSIONAL CASE
-        H = mean(std2(x))*(4/((d+2)*n))^(1/(d+4));
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     end
 end
 
@@ -183,10 +193,10 @@ function weights = Weights(x1, x2, Hx)
     [n, d] = size(x1);
     func1 = zeros(d,n,n);
     for i = 1:d
-        func1(i,:,:) = (x1(:,i)' - x2(:,i))./Hx;
+        func1(i,:,:) = (x1(:,i)' - x2(:,i))./Hx(:,i);
     end
     f1 = sum(exp(-1/2.*sum(func1.^2, 1)), 3);
-    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d);
+    const1 = mean(diag(inv(diag(n^2 * (Hx*sqrt(2*pi)).^d))));
     weights = const1.*(f1)';
 end
 
@@ -204,12 +214,12 @@ function test = F(Tx1, y, Tx2, Hx, Hy, weights)
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
         % PART F1 WHERE CENTER POINTS ARE IN Tx
-        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
-        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
 
         % PART F2 WHERE CENTER POINTS ARE IN Y
-        func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx;
-        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy;
+        func3(i,:,:) = (Tx1(:,i)' - y(:,i))./Hx(:,i);
+        func4(i,:,:) = (y(:,i)' - y(:,i))./Hy(:,i);
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -221,10 +231,15 @@ function test = F(Tx1, y, Tx2, Hx, Hy, weights)
     weight_sum = sum(weights);
     
     % CONSTANTS IN FRONT OF SUM
-    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * weight_sum);
-    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d * weight_sum);
-    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d * weight_sum);
-    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d * weight_sum);
+    const1 = mean(diag(inv(diag(n^2 * (Hx*sqrt(2*pi)).^d * weight_sum))));
+    const2 = mean(diag(inv(diag(m*n * (Hy*sqrt(2*pi)).^d * weight_sum))));
+    const3 = mean(diag(inv(diag(n*m * (Hx*sqrt(2*pi)).^d * weight_sum))));
+    const4 = mean(diag(inv(diag(m^2 * (Hy*sqrt(2*pi)).^d * weight_sum))));
+
+%    const1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * weight_sum);
+%    const2 = 1/(m*n * (Hy*sqrt(2*pi))^d * weight_sum);
+%    const3 = 1/(n*m * (Hx*sqrt(2*pi))^d * weight_sum);
+%    const4 = 1/(m^2 * (Hy*sqrt(2*pi))^d * weight_sum);
     
     % FINAL RESULT MULTIPLYING CONSTANTS
     test = const1.*(f1)' - const2.*(f2)' - const3.*(f3)' + const4.*(f4)';
@@ -260,8 +275,8 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy, weights)
 
     % FILL IN EACH MATRIX WITH THEIR RESPECTIVE VALUES AT EACH D
     for i = 1:d
-        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx;
-        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy;
+        func1(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
+        func2(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -271,8 +286,11 @@ function gradF = F_grad(Tx1, y, Tx2, Hx, Hy, weights)
     weight_sum = sum(weights);
 
     % CONSTANTS IN FRONT OF SUM
-    c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx * weight_sum);
-    c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy * weight_sum);
+    c1 = inv(diag(n^2 * (Hx*sqrt(2*pi)).^d * Hx' * weight_sum));
+    c2 = inv(diag(m*n * (Hy*sqrt(2*pi)).^d * Hy' * weight_sum));
+
+    %c1 = 1/(n^2 * (Hx*sqrt(2*pi))^d * Hx * weight_sum);
+    %c2 = 1/(m*n * (Hy*sqrt(2*pi))^d * Hy * weight_sum);
     
     % FINAL GRADIENT VALUE
     gradF = weights.*(c1.*(f1)' - c2.*(f2)');
@@ -311,9 +329,9 @@ end
 function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
     Tx = x;                             % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
-    z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
+    z = [Tx; y];                        % COMBINED SET OF POINTS - FOR BANDWIDTH
     Hy = bandwidth(y, length(x));       % BANDWIDTH FOR Y
-    Hz = bandwidth(z, length(x));  % BANDWIDTH FOR ALL POINTS
+    Hz = bandwidth(z, length(x));       % BANDWIDTH FOR ALL POINTS
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
@@ -331,7 +349,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
     while criteria > 0
         % FOR KEEPING TRACK OF ITERATION PROGRESS
-        if mod(iter, 10) == 0
+        if mod(iter, 20) == 0
             fprintf("Iteration: %d\n", iter)
         end
 
@@ -340,7 +358,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
         end
         iter = iter+1;
 
-        % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
+        % GETTING NEW BANDWIDTH (DECREASE TO HY)
         z = [Tx; y];
         Hz = bandwidth(z, length(x));
         Hz = (Hz + Hy) / 2;
@@ -350,7 +368,6 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, iter, min_index] = grad_de
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
         [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, weights);
-
         criteria = F(Tx, y, Tx, Hz, Hy, weights);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
