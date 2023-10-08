@@ -27,11 +27,11 @@ x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
 y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % 2D DATA POINTS
-%a = linspace(0,4,25);
-%b = linspace(0,4,25);
-%[A, B] = meshgrid(a, b);
-%x = [A(:) B(:)];
-%y = normrnd(7, 0.5, [241,2]);
+a = linspace(0,4,20);
+b = linspace(0,4,20);
+[A, B] = meshgrid(a, b);
+x = [A(:) B(:)];
+y = normrnd(7, 0.5, [500,2]);
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -190,9 +190,9 @@ elseif d_x == 3 || d_y == 3
     p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 end
 
-T_map = T_hist(:,:,min_index);
-figure()
-scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
+%T_map = T_hist(:,:,min_index);
+%figure()
+%scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 
 %{
 % PLOT TRAJECTORY OF EACH POINT
@@ -412,13 +412,13 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
     min_index = 1;
 
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
-    while criteria > 0
+    while criteria > 1e6
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(iter, 100) == 0
             fprintf("Iteration: %d\n", iter)
         end
 
-        if iter == 100
+        if iter == 200
             break
         end
         iter = iter+1;
