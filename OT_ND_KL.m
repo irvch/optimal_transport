@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 5e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MORE ITERATIONS)
+lam = 5e4;          % REGULARIZATION PARAMETER
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -30,8 +30,12 @@ y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 a = linspace(0,4,20);
 b = linspace(0,4,20);
 [A, B] = meshgrid(a, b);
-x = [A(:) B(:)];
-y = normrnd(7, 0.5, [500,2]);
+%x = [A(:) B(:)];
+x = normrnd(0, 0.5, [400,2]);
+%y = normrnd(6, 0.5, [400,2]);
+y1 = normrnd(6, 0.25, [200,2]);
+y2 = normrnd(7, 0.25, [200,2]);
+y = [y1; y2];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -49,7 +53,6 @@ end
 % PRECONDITIONING
 x1 = x.*std(y)./std(x);
 x = x1 - mean(x1) + mean(y);
-
 if d_x > d_y
     y = [y(:,1), y(:,2), ones(m, dim_diff)*mean(y(:,3))];
 elseif d_x < d_y
@@ -255,13 +258,13 @@ function H = bandwidth(x, n)
     if d == 1 % FOR ONE-DIMENSIONAL CASE
         H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
     elseif d == 2     % FOR MULTIDIMENSIONAL CASE
-        H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-        H = [H1, H1];
-        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        %H = [H1, H1];
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     elseif d == 3
-        H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-        H = [H1, H1, H1];
-        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+        %H = [H1, H1, H1];
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     end
 end
 
@@ -409,7 +412,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
     min_index = 1;
 
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
-    while criteria > 1e6
+    while criteria > 0
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(iter, 100) == 0
             fprintf("Iteration: %d\n", iter)
@@ -442,7 +445,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             minimum = criteria;
             min_index = iter;
         else
-            break
+            %break
         end
     end
 end
