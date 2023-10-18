@@ -23,15 +23,20 @@ lam = 5e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
 %x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
-x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
+x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'))+3;
 y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % 2D DATA POINTS
-a = linspace(0,4,20);
-b = linspace(0,4,20);
-[A, B] = meshgrid(a, b);
-x = [A(:) B(:)];
-y = normrnd(7, 0.5, [500,2]);
+%a = linspace(0,4,20);
+%b = linspace(0,4,20);
+%[A, B] = meshgrid(a, b);
+%x = [A(:) B(:)];
+%y = normrnd(7, 0.5, [500,2]);
+x = normrnd(0, 0.5, [400,2]);
+%y = normrnd(6, 0.5, [400,2]);
+y1 = normrnd(6, 0.25, [200,2]);
+y2 = normrnd(7, 0.25, [200,2]);
+y = [y1; y2];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -49,13 +54,11 @@ end
 % PRECONDITIONING
 x1 = x.*std(y)./std(x);
 x = x1 - mean(x1) + mean(y);
-
 if d_x > d_y
     y = [y(:,1), y(:,2), ones(m, dim_diff)*mean(y(:,3))];
 elseif d_x < d_y
     x = [x(:,1), x(:,2), ones(n, dim_diff)*mean(y(:,3))];
 end
-
 
 %{
 x_coord_x = x(:,1);
@@ -412,7 +415,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
     min_index = 1;
 
     % CONTINUE UNTIL REACHING STOPPING CRITERIA
-    while criteria > 1e6
+    while criteria > 0
         % FOR KEEPING TRACK OF ITERATION PROGRESS
         if mod(iter, 100) == 0
             fprintf("Iteration: %d\n", iter)
