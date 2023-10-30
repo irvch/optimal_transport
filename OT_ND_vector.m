@@ -19,12 +19,12 @@ lam = 5e7;          % REGULARIZATION PARAMETER (HIGHER = BETTER ALIGNMENT BUT MO
 %y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
 % PYRAMID DATA SETS
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
-%x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
+y = table2array(readtable('revised data 3.xlsx', Sheet='every'));
+x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
-x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'))+3;
-y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'))+3;
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % 2D DATA POINTS
 %a = linspace(0,4,20);
@@ -32,11 +32,11 @@ y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 %[A, B] = meshgrid(a, b);
 %x = [A(:) B(:)];
 %y = normrnd(7, 0.5, [500,2]);
-x = normrnd(0, 0.5, [400,2]);
+%x = normrnd(0, 0.5, [400,2]);
 %y = normrnd(6, 0.5, [400,2]);
 y1 = normrnd(6, 0.25, [200,2]);
 y2 = normrnd(7, 0.25, [200,2]);
-y = [y1; y2];
+%y = [y1; y2];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -260,11 +260,11 @@ function H = bandwidth(x, n)
     elseif d == 2     % FOR MULTIDIMENSIONAL CASE
         H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
         H = [H1, H1];
-        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     elseif d == 3
         H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
         H = [H1, H1, H1];
-        %H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        H = std(x)*(4/((d+2)*n))^(1/(d+4));
     end
 end
 

@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 5e4;          % REGULARIZATION PARAMETER
+lam = 5e7;          % REGULARIZATION PARAMETER
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -19,23 +19,31 @@ lam = 5e4;          % REGULARIZATION PARAMETER
 %y = table2array(readtable('revised data edit.xlsx', Sheet='slope (2)'));
 
 % PYRAMID DATA SETS
-%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
-%x = table2array(readtable('revised data edit.xlsx', Sheet='every (3)'));
+y = table2array(readtable('revised data 3.xlsx', Sheet='every'));
+x = table2array(readtable('revised data set 1.xlsx', Sheet='every (3)'));
 
 % PYRAMID DATA WITH SHIFTED SOURCE
-x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
-y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
+%x = table2array(readtable('revised data 3.xlsx', Sheet='every (3)'));
+%y = table2array(readtable('revised data set 1.xlsx', Sheet='every'));
 
 % 2D DATA POINTS
 a = linspace(0,4,20);
 b = linspace(0,4,20);
 [A, B] = meshgrid(a, b);
 %x = [A(:) B(:)];
-x = normrnd(0, 0.5, [400,2]);
-%y = normrnd(6, 0.5, [400,2]);
-y1 = normrnd(6, 0.25, [200,2]);
-y2 = normrnd(7, 0.25, [200,2]);
-y = [y1; y2];
+mu_x = [0 9];
+sigma_x = [0.25 0; 0 1];
+%x = mvnrnd(mu_x, sigma_x, 200);
+
+mu_y = [7 7];
+sigma_y = [1 0; 0 0.25];
+%y = mvnrnd(mu_y, sigma_y, 200);
+mu_y1 = [7 10];
+sigma_y1 = [0.1 0; 0 0.1];
+
+y1 = mvnrnd(mu_y1, sigma_y1, 20);
+y2 = mvnrnd(mu_y, sigma_y, 200);
+%y = [y1; y2];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -50,39 +58,51 @@ elseif d_x < d_y
     x = [x, newrow_x];
 end
 
+% PLOTTING INITIAL DISTRIBUTIONS
+figure()
+hold on
+if d_x == 2 && d_y == 2
+    scatter(y(:,1), y(:,2), 'filled', 'red')
+    scatter(x(:,1), x(:,2), 'filled', 'blue')
+elseif d_x == 3 || d_y == 3
+    scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
+    scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
+end
+title('INITIAL DISTRIBUTIONS')
+legend('SOURCE', 'TARGET')
+hold off
+
 % PRECONDITIONING
-x1 = x.*std(y)./std(x);
-x = x1 - mean(x1) + mean(y);
+x1 = x.*std(y)./std(x); % CHANGE RESCALING CUZ STD INFLUENCED BY OUTLIERS
+
+% IGNORE OUTLIERS IN STD WITH IQR - DON'T WANT TO IGNORE THOUGH
+%iqr(y)
+%min = median(y) - 1.5.*iqr(y);
+%max = median(y) + 1.5.*iqr(y);
+
+%{
+if d_x == 2
+    % ROTATION TO ALIGN PRINCIPAL COMPONENTS IN 2D
+    pca1 = pca(x1);
+    pca2 = pca(y);
+    v1 = pca1(1,:);
+    v2 = pca2(1,:);
+    theta = acos(dot(v1, v2) / (norm(v1) * norm(v2))); % ANGLE BETWEEN 1ST PRINCIPLE COMPONENTS
+    R = [cos(theta) -sin(theta); sin(theta) cos(theta)]; % 2D ROTATION MATRIX
+    x1 = x1*R; % ROTATING DATA
+end
+%}
+
+% SHIFTING TO MEAN OR MEDIAN
+%x = x1 - mean(x1) + mean(y);
+x = x1 - median(x1) + median(y);
+
+% ADDING ANOTHER DIMENSION
 if d_x > d_y
     y = [y(:,1), y(:,2), ones(m, dim_diff)*mean(y(:,3))];
 elseif d_x < d_y
     x = [x(:,1), x(:,2), ones(n, dim_diff)*mean(y(:,3))];
 end
-
-
-%{
-x_coord_x = x(:,1);
-x_coord_y = x(:,2);
-y_coord_x = y(:,1);
-y_coord_y = y(:,2);
-
-disp([std(x_old(:,1)), std(x(:,1)), std(y(:,1))])
-disp([std(x_old(:,2)), std(x(:,2)), std(y(:,2))])
-disp([std(x_old(:,3)), std(x(:,3)), std(y(:,3))])
-%}
-
-%{
-% PRECONDITIONING X COORDS
-x1 = (x_coord_x).*std(y_coord_x)./std(x_coord_x);
-x_x = x1 - mean(x1) + mean(y_coord_x);
-
-% PRECONDITIONING Y COORDS
-x2 = (x_coord_y).*std(y_coord_y)./std(x_coord_y);
-x_y = x2 - mean(x2) + mean(y_coord_y);
-
-x = [x_x, x_y, x_old(:,3)];
-%}
-
 
 % START TIMER FOR ALGORITHM
 tic
@@ -96,40 +116,20 @@ fprintf("Final cost: %d\n\n", L_hist(min_index,:))
 
 % MAP RUNTIME
 runtime = toc;
-%time_hist(i,:) = runtime;
-%iter_hist(i,:) = iter;
-%L_final(i,:) = L2_hist(iter);
-%end
 
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
 if d_x == 2 && d_y == 2
-    scatter(x(:,1), x(:,2), 'filled', 'blue')
     scatter(y(:,1), y(:,2), 'filled', 'red')
+    scatter(x(:,1), x(:,2), 'filled', 'blue')
 elseif d_x == 3 || d_y == 3
     scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
     scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
 end
-title('INITIAL DISTRIBUTIONS')
+title('PRECONDITIONED DISTRIBUTIONS')
 legend('SOURCE', 'TARGET')
 hold off
-
-%{
-% PLOTTING PRECONDITIONED DISTRIBUTIONS
-figure()
-hold on
-if d == 2
-    scatter(x(:,1), x(:,2), 'filled', 'blue')
-    scatter(y(:,1), y(:,2), 'filled', 'red')
-elseif d == 3
-    scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
-    scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-end
-title('DISTRIBUTIONS')
-legend('SOURCE', 'TARGET')
-hold off
-%}
 
 % START TIMER FOR PLOTTING
 tic
@@ -157,29 +157,6 @@ plot(iters, eta_hist, '-')
 title('ETA')
 hold off
 
-%{
-% PLOT 25 MAP LOCATION HISTORIES
-figure()
-hold on
-for i = 1:min_index
-    T_map = T_hist(:,:,i);
-    subplot(5, 4, i)
-    hold on
-    if d == 2
-        scatter(y(:,1), y(:,2), 'filled', 'red')
-        scatter(T_map(:,1), T_map(:,2), 'filled', 'green')
-    elseif d == 3
-        scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
-        scatter3(T_map(:,1), T_map(:,2), T_map(:,3), 'filled', 'green')
-    end
-    iterations = sprintf('ITERS: %d', i);
-    title(iterations)
-    hold off
-end
-hold off
-%}
-
-
 % PLOTTING FINAL OPTIMAL MAP
 figure()
 hold on
@@ -193,29 +170,9 @@ elseif d_x == 3 || d_y == 3
     p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 end
 
-%T_map = T_hist(:,:,min_index);
-%figure()
-%scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
-
-%{
-% PLOT TRAJECTORY OF EACH POINT
-for i = 1:min_index-1
-    T_map_i1 = T_hist(:,:,i);
-    T_map_i2 = T_hist(:,:,i+1);
-    for j = 1:length(x)
-        if d == 2
-            line = plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green');
-        elseif d == 3
-            line = plot3([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], [T_map_i1(j,3) T_map_i2(j,3)], color = 'green');
-        end
-    end
-end
-%}
-
 title('FINAL MAP')
 legend([p_y, p_t], {'TARGET', 'MAP'})
 hold off
-
 
 %{
 % NEAREST NEIGHBOR SEARCH
@@ -242,7 +199,6 @@ scatter(new(:,1), new(:,2), 'filled', 'red');
 title('FINAL Y');
 hold off
 %}
-
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
