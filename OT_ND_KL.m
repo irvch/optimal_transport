@@ -33,17 +33,17 @@ b = linspace(0,4,20);
 %x = [A(:) B(:)];
 mu_x = [0 9];
 sigma_x = [0.25 0; 0 1];
-%x = mvnrnd(mu_x, sigma_x, 200);
+x = mvnrnd(mu_x, sigma_x, 200);
 
 mu_y = [7 7];
 sigma_y = [1 0; 0 0.25];
 %y = mvnrnd(mu_y, sigma_y, 200);
-mu_y1 = [7 10];
+mu_y1 = [7 11];
 sigma_y1 = [0.1 0; 0 0.1];
 
-y1 = mvnrnd(mu_y1, sigma_y1, 20);
+y1 = mvnrnd(mu_y1, sigma_y1, 50);
 y2 = mvnrnd(mu_y, sigma_y, 200);
-%y = [y1; y2];
+y = [y1; y2];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -72,28 +72,15 @@ title('INITIAL DISTRIBUTIONS')
 legend('SOURCE', 'TARGET')
 hold off
 
-% PRECONDITIONING
-x1 = x.*std(y)./std(x); % CHANGE RESCALING CUZ STD INFLUENCED BY OUTLIERS
+% PRECONDITIONING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+s_x = sqrt(sum(abs(x-median(x)))/length(x)); % IMMUNE TO LARGE CLUSTERS OF OUTLIERS
+s_y = sqrt(sum(abs(y-median(y)))/length(y)); % ROBUST DISPERSION MEASURE USING L1 NORM
 
-% IGNORE OUTLIERS IN STD WITH IQR - DON'T WANT TO IGNORE THOUGH
-%iqr(y)
-%min = median(y) - 1.5.*iqr(y);
-%max = median(y) + 1.5.*iqr(y);
+%x1 = x.*std(y)./std(x);    % OG RESCALING BASED ON STD - BETTER FOR SMALL OUTLIERS
+%x1 = x.*s_y./s_x;          % RESCALING X1 BASED ON ROBUST MEASURE
+x1 = x.*s_y./std(x);        % USE STD OF X TO REACH MORE POINTS IN X
 
-%{
-if d_x == 2
-    % ROTATION TO ALIGN PRINCIPAL COMPONENTS IN 2D
-    pca1 = pca(x1);
-    pca2 = pca(y);
-    v1 = pca1(1,:);
-    v2 = pca2(1,:);
-    theta = acos(dot(v1, v2) / (norm(v1) * norm(v2))); % ANGLE BETWEEN 1ST PRINCIPLE COMPONENTS
-    R = [cos(theta) -sin(theta); sin(theta) cos(theta)]; % 2D ROTATION MATRIX
-    x1 = x1*R; % ROTATING DATA
-end
-%}
-
-% SHIFTING TO MEAN OR MEDIAN
+% SHIFTING TO MEAN OR MEDIAN OF TARGET
 %x = x1 - mean(x1) + mean(y);
 x = x1 - median(x1) + median(y);
 
@@ -104,7 +91,8 @@ elseif d_x < d_y
     x = [x(:,1), x(:,2), ones(n, dim_diff)*mean(y(:,3))];
 end
 
-% START TIMER FOR ALGORITHM
+
+% START TIMER FOR ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic
 
 % RUNNING GRADIENT DESCENT
@@ -207,21 +195,33 @@ disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
 %}
 
-% BEGINNING OPTIMAL TRANSPORT ALGORITHM
+
+% BEGINNING OPTIMAL TRANSPORT ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % BANDWIDTH MATRIX SELECTION WITH SILVERMAN'S RULE OF THUMB
-function H = bandwidth(x, n)                   
+function H = bandwidth(x, n, std_switch)
     [~, d] = size(x);
-    if d == 1 % FOR ONE-DIMENSIONAL CASE
-        H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
-    elseif d == 2     % FOR MULTIDIMENSIONAL CASE
-        %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-        %H = [H1, H1];
-        H = std(x)*(4/((d+2)*n))^(1/(d+4));
-    elseif d == 3
-        %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-        %H = [H1, H1, H1];
-        H = std(x)*(4/((d+2)*n))^(1/(d+4));
-    end
+    if std_switch == false
+        if d == 1 % FOR ONE-DIMENSIONAL CASE
+            H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
+        elseif d == 2 % FOR MULTIDIMENSIONAL CASE
+            %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+            %H = [H1, H1];
+            H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        elseif d == 3
+            %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
+            %H = [H1, H1, H1];
+            H = std(x)*(4/((d+2)*n))^(1/(d+4));
+        end
+    else
+        s_x = sqrt(sum(abs(x-median(x)))/length(x)); % IMMUNE TO LARGE CLUSTERS OF OUTLIERS
+        if d == 1 % FOR ONE-DIMENSIONAL CASE
+            H = 0.9*min(s_x, iqr(x)/1.34)*n^(-1/5);
+        elseif d == 2 % FOR MULTIDIMENSIONAL CASE
+            H = s_x*(4/((d+2)*n))^(1/(d+4));
+        elseif d == 3
+            H = s_x*(4/((d+2)*n))^(1/(d+4));
+        end
+    end    
 end
 
 % COST FUNCTION C (RETURNS CONSTANT)
@@ -247,9 +247,14 @@ function test = KL(Tx1, y, Tx2, Hx, Hy)
     for i = 1:d
         % DISTRIBUTION P(x) WITH CENTER POINTS IN Tx
         p(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
-
+       
         % DISTRIBUTION Q(x) WITH CENTER POINTS IN Tx
         q(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
+
+        for j = 1:n
+            p(i,j,j) = 0;
+            q(i,j,j) = 0;
+        end
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -305,6 +310,11 @@ function gradF = KL_grad(Tx1, y, Tx2, Hx, Hy)
 
         % DISTRIBUTION Q(x) WITH CENTER POINTS IN Tx
         q(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
+
+        for j = 1:n
+            p(i,j,j) = 0;
+            q(i,j,j) = 0;
+        end
     end
 
     % SUMMATION TO CALCULATE ORIGINAL DISTRIBUTION
@@ -349,10 +359,10 @@ end
 % GRADIENT DESCENT
 function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] = grad_descent(x, y, eta, lam)
     % INITIAL VALUES
-    Tx = x;                              % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
-    z = [Tx; y];                         % COMBINED SET OF POINTS - FOR BANDWIDTH
-    Hy = bandwidth(y, length(x));        % BANDWIDTH FOR Y
-    Hz = bandwidth(z, length(x));        % BANDWIDTH FOR ALL POINTS
+    Tx = x;                                  % INITIAL MAP SHOULD BE THE ORIGINAL SET OF POINTS
+    z = [Tx; y];                             % COMBINED SET OF POINTS - FOR BANDWIDTH
+    Hy = bandwidth(y, length(x), true);      % BANDWIDTH FOR Y - USE ROBUST DEVIATION MEASURE
+    Hz = bandwidth(z, length(x), true);     % BANDWIDTH FOR ALL POINTS - USE STD
 
     % INITIALIZING EMPTY HISTORY FOR ALL PLOTS OVER TIME
     T_hist = Tx; % FIRST ENTRY IN MAP HISTORY SHOULD BE THE SOURCE DISTRIBUTION
@@ -374,14 +384,14 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
             fprintf("Iteration: %d\n", iter)
         end
 
-        if iter == 200
+        if iter == 100
             break
         end
         iter = iter+1;
 
-        % GETTING NEW BANDWIDTH (DECREASE TO HY) AND LAMBDA (INCREASE TO FINAL)
+        % GETTING NEW BANDWIDTH (CONVERGE TO HY)
         z = [Tx; y];
-        Hz = bandwidth(z, length(x));
+        Hz = bandwidth(z, length(x), true);
         Hz = (Hz + Hy) / 2;
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
