@@ -250,11 +250,6 @@ function test = KL(Tx1, y, Tx2, Hx, Hy)
        
         % DISTRIBUTION Q(x) WITH CENTER POINTS IN Tx
         q(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
-
-        for j = 1:n
-            p(i,j,j) = 0;
-            q(i,j,j) = 0;
-        end
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
@@ -310,11 +305,6 @@ function gradF = KL_grad(Tx1, y, Tx2, Hx, Hy)
 
         % DISTRIBUTION Q(x) WITH CENTER POINTS IN Tx
         q(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
-
-        for j = 1:n
-            p(i,j,j) = 0;
-            q(i,j,j) = 0;
-        end
     end
 
     % SUMMATION TO CALCULATE ORIGINAL DISTRIBUTION
