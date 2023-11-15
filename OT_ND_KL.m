@@ -33,17 +33,19 @@ b = linspace(0,4,20);
 %x = [A(:) B(:)];
 mu_x = [0 9];
 sigma_x = [0.25 0; 0 1];
-x = mvnrnd(mu_x, sigma_x, 200);
+%x = mvnrnd(mu_x, sigma_x, 200);
 
-mu_y = [7 7];
-sigma_y = [1 0; 0 0.25];
+mu_y1 = [7 7];
+sigma_y1 = [1 0; 0 0.25];
 %y = mvnrnd(mu_y, sigma_y, 200);
-mu_y1 = [7 11];
-sigma_y1 = [0.1 0; 0 0.1];
+mu_y2 = [7 11];
+sigma_y2 = [0.1 0; 0 0.1];
+sigma_y3 = [10 0; 0 10];
 
-y1 = mvnrnd(mu_y1, sigma_y1, 50);
-y2 = mvnrnd(mu_y, sigma_y, 200);
-y = [y1; y2];
+y1 = mvnrnd(mu_y1, sigma_y1, 200);
+y2 = mvnrnd(mu_y2, sigma_y2, 10);
+y3 = mvnrnd(mu_y1, sigma_y3, 30);
+%y = [y1; y2; y3];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -77,8 +79,8 @@ s_x = sqrt(sum(abs(x-median(x)))/length(x)); % IMMUNE TO LARGE CLUSTERS OF OUTLI
 s_y = sqrt(sum(abs(y-median(y)))/length(y)); % ROBUST DISPERSION MEASURE USING L1 NORM
 
 %x1 = x.*std(y)./std(x);    % OG RESCALING BASED ON STD - BETTER FOR SMALL OUTLIERS
-%x1 = x.*s_y./s_x;          % RESCALING X1 BASED ON ROBUST MEASURE
-x1 = x.*s_y./std(x);        % USE STD OF X TO REACH MORE POINTS IN X
+x1 = x.*s_y./s_x;          % RESCALING X1 BASED ON ROBUST MEASURE
+%x1 = x.*s_y./std(x);           % USE STD OF X TO REACH MORE POINTS IN X
 
 % SHIFTING TO MEAN OR MEDIAN OF TARGET
 %x = x1 - mean(x1) + mean(y);
@@ -157,43 +159,15 @@ elseif d_x == 3 || d_y == 3
     p_y = scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red');
     p_t = scatter3(T_map(:,1), T_map(:,2),  T_map(:,3), 'filled', 'green');
 end
-
 title('FINAL MAP')
 legend([p_y, p_t], {'TARGET', 'MAP'})
 hold off
-
-%{
-% NEAREST NEIGHBOR SEARCH
-idk = knnsearch(y, T_map);
-new = y(idk,:);
-
-% PLOTTING NEAREST TARGET POINTS TO OPTIMAL MAP RESULTS
-figure()
-hold on
-scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
-scatter(new(:,1), new(:,2), 'filled', 'red');
-title('NEAREST NEIGHBORS RESULT')
-hold off
-
-% COMPARING TARGET SET BEFORE AND AFTER NEAREST NEIGHBORS SEARCH
-figure()
-hold on
-subplot(1, 2, 1);
-scatter(y(:,1), y(:,2), 'filled', 'red');
-title('INITIAL Y');
-
-subplot(1, 2, 2);
-scatter(new(:,1), new(:,2), 'filled', 'red');
-title('FINAL Y');
-hold off
-%}
 
 % END TIMER AND DISPLAY RUNTIME
 plotting = toc;
 disp(['ALGO RUNTIME: ' num2str(runtime) ' sec'])
 disp(['PLOT RUNTIME: ' num2str(plotting) ' sec'])
 disp(['TOTAL RUNTIME: ' num2str(runtime + plotting) ' sec'])
-%}
 
 
 % BEGINNING OPTIMAL TRANSPORT ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -203,22 +177,14 @@ function H = bandwidth(x, n, std_switch)
     if std_switch == false
         if d == 1 % FOR ONE-DIMENSIONAL CASE
             H = 0.9*min(std(x), iqr(x)/1.34)*n^(-1/5);
-        elseif d == 2 % FOR MULTIDIMENSIONAL CASE
-            %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-            %H = [H1, H1];
-            H = std(x)*(4/((d+2)*n))^(1/(d+4));
-        elseif d == 3
-            %H1 = mean(std(x))*(4/((d+2)*n))^(1/(d+4));
-            %H = [H1, H1, H1];
+        else
             H = std(x)*(4/((d+2)*n))^(1/(d+4));
         end
     else
         s_x = sqrt(sum(abs(x-median(x)))/length(x)); % IMMUNE TO LARGE CLUSTERS OF OUTLIERS
         if d == 1 % FOR ONE-DIMENSIONAL CASE
             H = 0.9*min(s_x, iqr(x)/1.34)*n^(-1/5);
-        elseif d == 2 % FOR MULTIDIMENSIONAL CASE
-            H = s_x*(4/((d+2)*n))^(1/(d+4));
-        elseif d == 3
+        else
             H = s_x*(4/((d+2)*n))^(1/(d+4));
         end
     end    
@@ -247,7 +213,7 @@ function test = KL(Tx1, y, Tx2, Hx, Hy)
     for i = 1:d
         % DISTRIBUTION P(x) WITH CENTER POINTS IN Tx
         p(i,:,:) = (Tx1(:,i)' - Tx2(:,i))./Hx(:,i);
-       
+        
         % DISTRIBUTION Q(x) WITH CENTER POINTS IN Tx
         q(i,:,:) = (y(:,i)' - Tx2(:,i))./Hy(:,i);
     end
