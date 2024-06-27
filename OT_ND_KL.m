@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 5e7;          % REGULARIZATION PARAMETER
+lam = 5e8;          % TRANSPORT REGULARIZATION
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -33,19 +33,20 @@ b = linspace(0,4,20);
 %x = [A(:) B(:)];
 mu_x = [0 9];
 sigma_x = [0.25 0; 0 1];
-%x = mvnrnd(mu_x, sigma_x, 200);
+x = mvnrnd(mu_x, sigma_x, 10);
+x_original = x;
 
 mu_y1 = [7 7];
 sigma_y1 = [1 0; 0 0.25];
-%y = mvnrnd(mu_y, sigma_y, 200);
+%y = mvnrnd(mu_y1, sigma_y1, 200);
 mu_y2 = [7 11];
 sigma_y2 = [0.1 0; 0 0.1];
 sigma_y3 = [10 0; 0 10];
 
-y1 = mvnrnd(mu_y1, sigma_y1, 200);
-y2 = mvnrnd(mu_y2, sigma_y2, 10);
-y3 = mvnrnd(mu_y1, sigma_y3, 30);
-%y = [y1; y2; y3];
+y1 = mvnrnd(mu_y1, sigma_y1, 10);
+y2 = mvnrnd(mu_y2, sigma_y2, 1);
+y3 = mvnrnd(mu_y1, sigma_y3, 3);
+y = [y1; y2; y3];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -150,9 +151,17 @@ hold off
 % PLOTTING FINAL OPTIMAL MAP
 figure()
 hold on
+
+for i = 1:iter-1
+    T_map_i1 = T_hist(:,:,i);
+    T_map_i2 = T_hist(:,:,i+1);
+    for j = 1:length(x)
+        plot([T_map_i1(j,1) T_map_i2(j,1)], [T_map_i1(j,2) T_map_i2(j,2)], color = 'green')
+    end
+end
+
 T_map = T_hist(:,:,min_index);
 if d_x == 2 && d_y == 2
-    %scatter(x(:,1), x(:,2), 'filled', 'blue')
     p_y = scatter(y(:,1), y(:,2), 'filled', 'red');
     p_t = scatter(T_map(:,1), T_map(:,2), 'filled', 'green');
 elseif d_x == 3 || d_y == 3
@@ -204,6 +213,7 @@ end
 function test = KL(Tx1, y, Tx2, Hx, Hy)
     [n, d] = size(Tx1);
     m = length(y);
+    epsilon = 1e-10; % TO MAKE SURE WE DON'T DIVIDE BY ZERO
     
     % INITIALIZE EMPTY MATRICES
     p = zeros(d,n,n);
@@ -223,8 +233,8 @@ function test = KL(Tx1, y, Tx2, Hx, Hy)
     q1 = sum(exp(-1/2.*sum(q.^2, 1)), 3);
 
     % CONSTANTS TO NORMALIZE AND FINISH COMPUTATION
-    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d);
-    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d);
+    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d + epsilon);
+    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d + epsilon);
     
     % FINAL DISTRIBUTIONS
     p_dist = const1 .* p1;
@@ -259,6 +269,7 @@ end
 function gradF = KL_grad(Tx1, y, Tx2, Hx, Hy)
     [n, d] = size(Tx1);
     m = length(y);
+    epsilon = 1e-10;
 
     % INITIALIZE EMPTY MATRICES
     p = zeros(d,n,n);
@@ -274,23 +285,24 @@ function gradF = KL_grad(Tx1, y, Tx2, Hx, Hy)
     end
 
     % SUMMATION TO CALCULATE ORIGINAL DISTRIBUTION
-    p1 = sum(exp(-1/2.*sum(p.^2, 1)), 'all');
-    q1 = sum(exp(-1/2.*sum(q.^2, 1)), 'all');
+    p1 = sum(exp(-1/2.*sum(p.^2, 1)), 'all') + epsilon;
+    q1 = sum(exp(-1/2.*sum(q.^2, 1)), 'all') + epsilon;
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP FOR GRADIENT
-    grad_p1 = sum(p.*exp(-1/2.*sum(p.^2, 1)), 3);
-    grad_q1 = sum(q.*exp(-1/2.*sum(q.^2, 1)), 3);
+    grad_p1 = sum(p.*exp(-1/2.*sum(p.^2, 1)), 3)';
+    grad_q1 = sum(q.*exp(-1/2.*sum(q.^2, 1)), 3)';
 
     % CONSTANTS IN FRONT OF ORIGINAL DISTRIBUTION SUM
-    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d);
-    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d);
+    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d + epsilon);
+    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d + epsilon);
 
     % CONSTANTS IN FRONT OF GRADIENT SUM
-    grad_p_const = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * mean(Hx));
-    grad_q_const = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * mean(Hy));
+    grad_p_const = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * mean(Hx) + epsilon);
+    grad_q_const = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * mean(Hy) + epsilon);
 
     % FINAL GRADIENT VALUE
-    gradF = (grad_p_const.*(grad_p1)')./(n*const1.*p1) - (grad_q_const.*(grad_q1)')./(n*const2.*q1);
+    gradF = (grad_p_const.*grad_p1)./(n*const1.*p1) - (grad_q_const.*grad_q1)./(n*const2.*q1);
+    %gradF = grad_p1./(n*p1) - grad_q1./(n*q1);
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
@@ -305,7 +317,7 @@ function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta)
     Tx_next = Tx_curr - (eta .* l_grad);                                  % COMPUTE NEW MAP TX
     L_curr = L(x, y, Tx_curr, Hx, Hy, lam);                               % COMPUTE COST BASED ON PAST MAP
     L_next = L(x, y, Tx_next, Hx, Hy, lam);                               % COMPUTE COST BASED ON NEW MAP
-    while L_curr < L_next % NEXT COST L SHOULD NOT BE GREATER THAN THE CURRENT ONE
+    while L_curr < L_next                     
         eta = eta / 2;                                                    % SHRINK STEP SIZE
         Tx_next = Tx_curr - (eta .* l_grad);                              % COMPUTE NEW MAP TX WITH NEW ETA
         L_next = L(x, y, Tx_next, Hx, Hy, lam);                           % COMPUTE COST BASED ON NEW MAP
@@ -328,8 +340,8 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
     L2_hist = KL(Tx, y, Tx, Hz, Hy);
     L_hist = L1_hist + lam * KL(Tx, y, Tx, Hz, Hy);
 
-    criteria = 1e8; % ARBITRARY LARGE NUMBER TO START
-    minimum = 1e8;
+    criteria = 1e10; % ARBITRARY LARGE NUMBER TO START
+    minimum = 1e10;
     iter = 1;
     min_index = 1;
 

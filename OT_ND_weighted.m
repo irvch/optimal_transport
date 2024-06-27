@@ -33,7 +33,7 @@ b = linspace(0,4,20);
 %x = [A(:) B(:)];
 mu_x = [0 9];
 sigma_x = [0.25 0; 0 1];
-%x = mvnrnd(mu_x, sigma_x, 200);
+x = mvnrnd(mu_x, sigma_x, 200);
 
 mu_y1 = [7 7];
 sigma_y1 = [1 0; 0 0.25];
@@ -45,7 +45,7 @@ sigma_y3 = [10 0; 0 10];
 y1 = mvnrnd(mu_y1, sigma_y1, 200);
 y2 = mvnrnd(mu_y2, sigma_y2, 10);
 y3 = mvnrnd(mu_y1, sigma_y3, 30);
-%y = [y1; y2; y3];
+y = [y1; y2; y3];
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -231,14 +231,14 @@ function test = KL(Tx1, y, Tx2, Hx, Hy, weights)
     end
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP
-    p1 = sum(weights.' .* exp(-1/2.*sum(p.^2, 1)), 3);
-    q1 = sum(weights.' .* exp(-1/2.*sum(q.^2, 1)), 3);
+    p1 = sum(exp(-1/2.*sum(p.^2, 1)), 3);
+    q1 = sum(exp(-1/2.*sum(q.^2, 1)), 3);
 
     weight_sum = sum(weights);
 
     % CONSTANTS TO NORMALIZE AND FINISH COMPUTATION
-    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * weight_sum);
-    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * weight_sum);
+    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d);
+    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d);
     
     % FINAL DISTRIBUTIONS
     p_dist = const1 .* p1;
@@ -248,7 +248,7 @@ function test = KL(Tx1, y, Tx2, Hx, Hy, weights)
     entropy = log(p_dist) - log(q_dist);
 
     % FINAL RESULT SUMMING TOTAL ENTROPY AND NORMALIZING
-    test = sum(entropy)/n;
+    test = sum(weights.'.*entropy)/(n*weight_sum);
 end
 
 % GLOBAL COST FUNCTION L (RETURNS CONSTANT)
@@ -294,25 +294,27 @@ function gradF = KL_grad(Tx1, y, Tx2, Hx, Hy, weights)
     end
 
     % SUMMATION TO CALCULATE ORIGINAL DISTRIBUTION
-    p1 = sum(weights.' .* exp(-1/2.*sum(p.^2, 1)), 'all');
-    q1 = sum(weights.' .* exp(-1/2.*sum(q.^2, 1)), 'all');
+    p1 = sum(exp(-1/2.*sum(p.^2, 1)), 'all');
+    q1 = sum(exp(-1/2.*sum(q.^2, 1)), 'all');
 
     % USE TWO SUM FUNCTIONS IN PLACE OF DOUBLE FOR-LOOP FOR GRADIENT
-    grad_p1 = sum(weights.' .* p.*exp(-1/2.*sum(p.^2, 1)), 3);
-    grad_q1 = sum(weights.' .* q.*exp(-1/2.*sum(q.^2, 1)), 3);
+    grad_p1 = sum(p.*exp(-1/2.*sum(p.^2, 1)), 3);
+    grad_q1 = sum(q.*exp(-1/2.*sum(q.^2, 1)), 3);
 
     weight_sum = sum(weights);
 
     % CONSTANTS IN FRONT OF ORIGINAL DISTRIBUTION SUM
-    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * weight_sum);
-    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * weight_sum);
+    const1 = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d);
+    const2 = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d);
 
     % CONSTANTS IN FRONT OF GRADIENT SUM
-    grad_p_const = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * mean(Hx) * weight_sum);
-    grad_q_const = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * mean(Hy) * weight_sum);
+    grad_p_const = 1/(n^2 * (mean(Hx)*sqrt(2*pi)).^d * mean(Hx));
+    grad_q_const = 1/(m*n * (mean(Hy)*sqrt(2*pi)).^d * mean(Hy));
     
     % FINAL GRADIENT VALUE
-    gradF = (grad_p_const.*(grad_p1)')./(n*const1.*p1) - (grad_q_const.*(grad_q1)')./(n*const2.*q1);
+    grad_log_p = (grad_p_const.*weights.*(grad_p1)')./(n*const1.*p1*weight_sum);
+    grad_log_q = (grad_q_const.*weights.*(grad_q1)')./(n*const2.*q1*weight_sum);
+    gradF = grad_log_p - grad_log_q;
 end
 
 % GRADIENT OF L (RETURNS NxD MATRIX)
@@ -321,7 +323,7 @@ function gradL = L_grad(x, y, Tx, Hx, Hy, lam, weights)
 end
 
 % ADAPTIVE LEARNING RATE ETA (RETURNS CONSTANT AND GRAD DESCENT RESULT)
-function [eta, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, weights)
+function [eta, lam, Tx_next] = adapt_learning(x, y, Tx_curr, Hx, Hy, lam, eta, weights)
     eta = eta * 2;                                                                 % INCREASE ETA FOR FASTER CONVERGENCE
     l_grad = L_grad(x, y, Tx_curr, Hx, Hy, lam, weights);
     Tx_next = Tx_curr - (eta .* l_grad);                                           % COMPUTE NEW MAP TX
@@ -374,7 +376,7 @@ function [T_hist, L1_hist, L2_hist, L_hist, eta_hist, H_hist, iter, min_index] =
         Hz = (Hz + Hy) / 2;
 
         % GET NEW MAP TX AND LEARNING RATE ETA AT EACH STEP
-        [eta, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, weights);
+        [eta, lam, Tx] = adapt_learning(x, y, Tx, Hz, Hz, lam, eta, weights);
 
         % ADD CURRENT VALUES TO HISTORY DATA FOR PLOTTING
         T_hist(:,:,iter) = Tx;
