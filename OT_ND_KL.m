@@ -5,7 +5,7 @@ rng('default');
 
 % STARTING PARAMETERS
 eta = 0.1;          % INITIAL STEP SIZE
-lam = 5e8;          % TRANSPORT REGULARIZATION
+lam = 5e5;          % TRANSPORT REGULARIZATION
 
 %time_hist = zeros(40,1);
 %iter_hist = zeros(40,1);
@@ -47,6 +47,9 @@ y1 = mvnrnd(mu_y1, sigma_y1, 10);
 y2 = mvnrnd(mu_y2, sigma_y2, 1);
 y3 = mvnrnd(mu_y1, sigma_y3, 3);
 y = [y1; y2; y3];
+
+% TEST
+y = x(1:6, 1:2);
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
