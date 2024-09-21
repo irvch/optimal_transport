@@ -1,8 +1,8 @@
 % Define the supply, demand, and cost matrix
 supply = [15; 20; 15];
-x = supply./sum(supply) 
+x = supply./sum(supply);
 demand = [10; 20; 20; 5];
-y = demand./sum(demand)
+y = demand./sum(demand);
 
 % Define penalty parameters
 k = 0; % Penalty coefficient

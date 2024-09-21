@@ -2,13 +2,23 @@
 
 % DISCRETE SOURCE AND TARGET COORDINATES
 rng("default")
-
 mu_x = [0 1];
 sigma_x = [0.25 0; 0 0.25];
-X = mvnrnd(mu_x, sigma_x, 6);
-Y = X(3:end, :) + [0.5,-0.5];
-%X = [0, 1; 0, 2];
-%Y = [1, 1.5];
+X = mvnrnd(mu_x, sigma_x, 10);
+%Y = X(3:end, :) + [0.5,-0.5];
+Y = mvnrnd(mu_x, sigma_x, 8);
+
+% LAMBDA CLOSER TO 0 --> EXTREME PARTIAL
+%lambda = 0.7;
+lambda = 0.656;
+lambda = 0.6;
+%lambda = 0.5;
+%lambda = 0.36;
+%lambda = 0.35914;
+%lambda = 0.35;
+%lambda = 0.2;
+%lambda = 0.1;
+%lambda = 0.01;
 
 % Define the distributions
 p = ones(size(X, 1), 1);
@@ -16,22 +26,8 @@ p = p./sum(p); % NORMALIZED
 q = ones(size(Y, 1), 1);
 q = q./sum(q); % NORMALIZED
 
-% FOR 15 SOURCE, 10 TARGET - MASS CHANGES FOR 2ND RUN AND STAYS SAME FOR 3RD
-%p = [0.075; 0.075; 0; 0.075; 0.025; 0.075; 0.075; 0.075; 0.075; 0.075; 0.075; 0.075; 0.075; 0.075; 0.075;];
-%p = [0.080; 0.080; 0; 0.080; 0;     0.080; 0.080; 0.080; 0.080; 0.080; 0.040; 0.080; 0.080; 0.080; 0.080;];
-
-% FOR 10 SOURCE, 6 TARGET - MASS STAYS THE SAME FOR SECOND RUN
-%p = [0.125; 0; 0; 0.125; 0.125; 0.125; 0.125; 0.125; 0.125; 0.125;];
-%q = [0.1875; 0.1875; 0.1875; 0.1875; 0.0625; 0.1875;];
-
 format long
-% FOR 5 SOURCE, 1 TARGET - HARD THRESHOLD SINCE LESS POINTS
-% LAMBDA CLOSER TO 0 --> EXTREME PARTIAL
-%lambda = 0.98184736119;
-%lambda = 0.00000000001;
-lambda = 0;
-%lambda = 0.95;
-[T, fval, p_new, q_new, alpha, beta] = solveOptimalTransportWithConstraints(X, Y, p, q, lambda);
+[T, fval, p_new, q_new, alpha, beta] = partialOT(X, Y, p, q, lambda);
 disp('Optimal transport plan')
 disp(T);
 fprintf('Minimum Transportation Cost: %f\n', fval);
@@ -116,7 +112,7 @@ function C = computeCostMatrix(X, Y)
 end
 
 % PARTIAL OPTIMAL TRANSPORT
-function [T, fval, p_new, q_new, alpha, beta] = solveOptimalTransportWithConstraints(X, Y, p, q, lambda)
+function [T, fval, p_new, q_new, alpha, beta] = partialOT(X, Y, p, q, lambda)
 
     % COST MATRIX
     C = computeCostMatrix(X, Y);
@@ -157,17 +153,7 @@ end
 
 %{
 %  Solve the optimal transport problem
-function [T, fval] = solveOptimalTransport(X, Y, p, q)
-    % Inputs:
-    %   X - An m x d matrix of source points
-    %   Y - An n x d matrix of target points
-    %   a - An m x 1 vector of source distribution
-    %   b - An n x 1 vector of target distribution
-    %
-    % Outputs:
-    %   T - An m x n matrix representing the optimal transportation plan
-    %   fval - The minimum cost of transportation
-
+function [T, fval] = OT(X, Y, p, q)
     % Compute the cost matrix using the Frobenius norm
     C = computeCostMatrix(X, Y);
 
