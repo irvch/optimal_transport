@@ -4,9 +4,9 @@
 rng('default');
 
 % STARTING PARAMETERS
-eta = 1;          % INITIAL STEP SIZE
+eta = 0.1;          % INITIAL STEP SIZE
 lam = 5e5;          % REGULARIZATION PARAMETER
-mu = 1e7;           % PARTIAL-NESS REGULARLIZATION
+mu = 1e5;           % PARTIAL-NESS REGULARLIZATION
 
 % 2D DATA POINTS
 mu_x = [0 9];
@@ -26,6 +26,15 @@ y2 = mvnrnd(mu_y2, sigma_y2, 1);
 y3 = mvnrnd(mu_y1, sigma_y3, 3);
 y = [y1; y2; y3];
 
+% TEST
+y = x;
+x = x(1:6, 1:2);
+
+% INITIAL WEIGHTS
+delta = zeros(length(x), 1);
+epsilon = zeros(length(y), 1);
+p_init = exp(delta)./sum(exp(delta));
+q_init = exp(epsilon)./sum(exp(epsilon));
 
 % MATCH THE DIMENSIONS
 [n, d_x] = size(x);
@@ -44,8 +53,8 @@ end
 figure()
 hold on
 if d_x == 2 && d_y == 2
-    scatter(y(:,1), y(:,2), 'filled', 'red')
-    scatter(x(:,1), x(:,2), 'filled', 'blue')
+    scatter(y(:,1), y(:,2), q_init*500, 'filled', 'red')
+    scatter(x(:,1), x(:,2), p_init*500, 'filled', 'blue')
 elseif d_x == 3 || d_y == 3
     scatter3(y(:,1), y(:,2), y(:,3), 'filled', 'red')
     scatter3(x(:,1), x(:,2), x(:,3), 'filled', 'blue')
@@ -62,24 +71,6 @@ x1 = x.*s_y./s_x;          % RESCALING X1 BASED ON ROBUST MEASURE
 
 % SHIFTING TO MEAN OR MEDIAN OF TARGET
 x = x1 - median(x1) + median(y);
-
-% TEST
-x = [0.268833569773050   0.783203988847158
-   0.916942507297543   1.171312233269325
-  -1.129423430501824   2.789198469862880
-   0.431086660184060   2.384718514942438
-   0.159382619929490   0.325056529921739
-  -0.653844148152637   2.517461733165927];
-y = [-0.629423430501824   2.289198469862880;
-   0.931086660184060   1.884718514942438;
-   0.659382619929490  -0.174943470078261;
-  -0.153844148152637   2.017461733165927];
-
-% INITIAL WEIGHTS
-delta = zeros(length(x), 1);
-epsilon = zeros(length(y), 1);
-p_init = exp(delta)./sum(exp(delta));
-q_init = exp(epsilon)./sum(exp(epsilon));
 
 % START TIMER FOR ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic
@@ -99,7 +90,6 @@ runtime = toc;
 % PLOTTING INITIAL DISTRIBUTIONS
 figure()
 hold on
-axis([-1.5 3 -0.5 3])
 if d_x == 2 && d_y == 2
     scatter(y(:,1), y(:,2), q_init*500, 'filled', 'red')
     scatter(x(:,1), x(:,2), p_init*500, 'filled', 'blue')
@@ -140,8 +130,6 @@ hold off
 % PLOTTING FINAL OPTIMAL MAP
 figure()
 hold on
-axis([-1.5 3 -0.5 3])
-
 for i = 1:iter-1
     T_map_i1 = T_hist(:,:,i);
     T_map_i2 = T_hist(:,:,i+1);
@@ -263,7 +251,7 @@ function l = L(x, y, Tx, Hx, Hy, lam, mu, delta, epsilon)
     q_hat = exp(epsilon)/sum(exp(epsilon));
 
     % IN PLACE OF MAX FUNCTION SINCE GRADIENT DNE
-    big_num = 100;
+    big_num = 1e2;
     reg1 = sum(p_hat.^big_num).^(1/big_num);
     reg2 = sum(q_hat.^big_num).^(1/big_num);
     
@@ -350,7 +338,7 @@ end
 function [gradL_Tx, gradL_d, gradL_e] = L_grad(x, y, Tx, Hx, Hy, lam, mu, delta, epsilon)
     [gradC_Tx, gradC_d, gradC_e] = C_grad(x, Tx, delta);
     [gradF_Tx, gradF_d, gradF_e] = KL_grad(Tx, y, Tx, Hx, Hy, delta, epsilon);
-    big_num = 100;
+    big_num = 1e2;
 
     p_hat = exp(delta)/sum(exp(delta));
     q_hat = exp(epsilon)/sum(exp(epsilon));
