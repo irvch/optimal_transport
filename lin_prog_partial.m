@@ -1,22 +1,30 @@
 % DISCRETE PARTIAL OPTIMAL TRANSPORT USING LINEAR PROGRAMMING
+% WORKS WONDERFULLY
 
 % DISCRETE SOURCE AND TARGET COORDINATES
 rng("default")
 mu_x = [0 1];
 sigma_x = [0.25 0; 0 0.25];
-X = mvnrnd(mu_x, sigma_x, 10);
-%Y = X(3:end, :) + [0.5,-0.5];
-Y = mvnrnd(mu_x, sigma_x, 8);
+
+X = mvnrnd(mu_x, sigma_x, 30);
+Y = X + [0.05, -0.05];
+addition = mvnrnd(mu_x, sigma_x*0.25, 5) + [2.5, -2];
+Y = [Y; addition];
+
+%X = table2array(readtable('revised data set 1.xlsx', Sheet='every')) + [10, 10, 0];
+%Y = table2array(readtable('revised data 3.xlsx', Sheet='every'));
+
 
 % LAMBDA CLOSER TO 0 --> EXTREME PARTIAL
+%lambda = 5;
 %lambda = 0.7;
-lambda = 0.656;
-lambda = 0.6;
+%lambda = 0.656;
+%lambda = 0.6;
 %lambda = 0.5;
 %lambda = 0.36;
 %lambda = 0.35914;
 %lambda = 0.35;
-%lambda = 0.2;
+lambda = 0.2;
 %lambda = 0.1;
 %lambda = 0.01;
 
@@ -29,7 +37,7 @@ q = q./sum(q); % NORMALIZED
 format long
 [T, fval, p_new, q_new, alpha, beta] = partialOT(X, Y, p, q, lambda);
 disp('Optimal transport plan')
-disp(T);
+%disp(T);
 fprintf('Minimum Transportation Cost: %f\n', fval);
 fprintf('Alpha: %f\n', alpha);
 fprintf('Beta: %f\n', beta); 
@@ -59,9 +67,11 @@ end
 % PLOTTING ORIGINAL DATA
 figure();
 hold on;
-axis([-1.5 3 -0.5 3])
+%axis([-1.5 3 -0.5 3])
 scatter(X(:,1), X(:,2), p*500, 'filled', 'blue');
 scatter(Y(:,1), Y(:,2), q*500, 'filled', 'red');
+%scatter3(X(:,1), X(:,2), X(:,3), 'filled', 'blue')
+%scatter3(Y(:,1), Y(:,2), Y(:,3), 'filled', 'red')
 legend('Source Pts', 'Target Pts');
 title("INITIAL DATA POINTS")
 grid on;
@@ -82,16 +92,22 @@ end
 % PLOTTING NEW DATA
 figure();
 hold on;
-axis([-1.5 3 -0.5 3])
+%axis([-1.5 3 -0.5 3])
 scatter(X(:,1), X(:,2), p*500, 'filled', 'blue');
 scatter(X(:,1), X(:,2), p_new*500, 'filled', 'green');
 scatter(Y(:,1), Y(:,2), q*500, 'filled', 'red');
 scatter(Y(:,1), Y(:,2), q_new*500, 'filled', 'magenta');
+%scatter3(X(:,1), X(:,2), X(:,3), p*10000, 'filled', 'blue')
+%scatter3(X(:,1)+0.01, X(:,2), X(:,3), p_new*10000, 'filled', 'green')
+%scatter3(Y(:,1), Y(:,2), Y(:,3), q*10000, 'filled', 'red')
+%scatter3(Y(:,1), Y(:,2), Y(:,3), q_new*10000, 'filled', 'magenta')
+
 % Draw arrows from X to Y based on the transport matrix
 for i = 1:size(X,1)
     for j = 1:size(Y,1)
         if T(j,i) >= 1e-6  % Draw an arrow if the transport amount is greater than zero
             quiver(X(i,1), X(i,2), Y(j,1) - X(i,1), Y(j,2) - X(i,2), 0, 'g', 'LineWidth', 2, 'MaxHeadSize', 0.5);
+            %quiver3(X(i,1), X(i,2), X(i,3), Y(j,1) - X(i,1), Y(j,2) - X(i,2), Y(j,3) - X(i,3),  0, 'g', 'LineWidth', 2, 'MaxHeadSize', 0.5);
         end
     end
 end
@@ -127,11 +143,11 @@ function [T, fval, p_new, q_new, alpha, beta] = partialOT(X, Y, p, q, lambda)
     % EQUALITY CONSTRAINT Aeq
     Aeq_1 = [kron(eye(N), ones(1, M)); kron(ones(1, N), eye(M)); zeros(2, M*N)];
     Aeq_2 = [[diag(-1*ones(N+M, 1)); ones(1, N), zeros(1, M); zeros(1, N), ones(1, M)], zeros(M+N+2, 2)];
-    Aeq = [Aeq_1, Aeq_2; zeros(2, M*N+M+N+2)];
+    Aeq = [Aeq_1, Aeq_2];
 
     % EQUALITY CONSTRAINT Beq
-    beq = [zeros(N+M, 1); ones(2, 1); 0; 0];
-    
+    beq = [zeros(N+M, 1); ones(2, 1)];
+
     % INEQUALITY CONSTRAINTS FOR P <= ALPHA*P_NEW, Q <= BETA*Q_NEW
     A_ineq = [zeros(N+M, M*N), diag(ones(N+M, 1)), [-1.*p(:); zeros(M, 1)], [zeros(N, 1); -1.*q(:)]];
     b_ineq = [zeros(N+M, 1)];
